@@ -1,8 +1,11 @@
-# aichat-workspace-operator
-// TODO(user): Add simple overview of use/purpose
+# AIChat Workspace Operator
+
+Creating AIChat Workspaces, using [Open WebUI](https://openwebui.com/) as the front-end to [Ollama](https://ollama.com/).
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+A Kubernetes Operator, that will create the components needed to run Open WebUI with Ollama as the backend API for interacting with LLMs.
+This will use a multi-tennant pattern. Each AIChat Workspace will be isolated using a namespace.
 
 ## Getting Started
 
