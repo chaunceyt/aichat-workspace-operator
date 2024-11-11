@@ -1,0 +1,23 @@
+# permissions for end users to view aichatworkspaces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: aichat-workspace-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: aichatworkspace-viewer-role
+rules:
+- apiGroups:
+  - apps.aichatworkspaces.io
+  resources:
+  - aichatworkspaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps.aichatworkspaces.io
+  resources:
+  - aichatworkspaces/status
+  verbs:
+  - get

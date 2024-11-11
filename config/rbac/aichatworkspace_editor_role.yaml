@@ -1,0 +1,27 @@
+# permissions for end users to edit aichatworkspaces.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: aichat-workspace-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: aichatworkspace-editor-role
+rules:
+- apiGroups:
+  - apps.aichatworkspaces.io
+  resources:
+  - aichatworkspaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.aichatworkspaces.io
+  resources:
+  - aichatworkspaces/status
+  verbs:
+  - get

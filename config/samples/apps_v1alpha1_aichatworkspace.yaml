@@ -1,0 +1,9 @@
+apiVersion: apps.aichatworkspaces.io/v1alpha1
+kind: AIChatWorkspace
+metadata:
+  labels:
+    app.kubernetes.io/name: aichat-workspace-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: aichatworkspace-sample
+spec:
+  # TODO(user): Add fields here
