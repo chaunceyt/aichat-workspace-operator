@@ -1,0 +1,149 @@
+# llama3.1:8b # 4.7GB, qwen2:7b, # 4.4GB
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  labels:
+    app.kubernetes.io/name: ollama-pvc
+    app.kubernetes.io/instance: ollama-api
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: model-storage
+    app.kubernetes.io/part-of: openwebui
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ollama-api
+  labels:
+    app.kubernetes.io/name: ollama-api
+    app.kubernetes.io/instance: serviceaccount
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: serviceaccount
+    app.kubernetes.io/part-of: ollama-api
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: webui
+  labels:
+    app.kubernetes.io/name: webui
+    app.kubernetes.io/instance: serviceaccount
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: serviceaccount
+    app.kubernetes.io/part-of: openwebui
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  annotations:
+    aichat-workspace-operator.io/operatorVersion: 0.0.1
+  name: ollama-gemma2-2b
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/instance: ollama-api
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: llm-manager-api
+    app.kubernetes.io/part-of: ollama-api
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+spec:
+  serviceAccountName: ollama-api
+  automountServiceAccountToken: false
+  securityContext:
+    fsGroup: 10001
+    runAsUser: 10001
+    runAsGroup: 10001
+  containers:
+    - name: ollama
+      image: ollama/ollama:0.4.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        privileged: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - |
+                while ! /bin/ollama ps > /dev/null 2>&1; do
+                 sleep 2
+                done
+                echo "phi3 gemma2:2b"  | xargs -n1 /bin/ollama pull
+      volumeMounts:
+      - name: data
+        mountPath: /.ollama
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: ollama-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  labels:
+    app.kubernetes.io/name: ollama-service
+    app.kubernetes.io/instance: ollama-api
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: service-endpoint
+    app.kubernetes.io/part-of: ollama-api
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+spec:
+  selector:
+    app.kubernetes.io/name: ollama
+  ports:
+    - protocol: TCP
+      port: 11434
+      targetPort: 11434
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: open-webui-deployment
+ labels:
+    app.kubernetes.io/name: open-webui
+    app.kubernetes.io/instance: webui
+    app.kubernetes.io/version: 0.4.1
+    app.kubernetes.io/component: webui
+    app.kubernetes.io/part-of: openwebui
+    app.kubernetes.io/managed-by: aichat-workspace-operator
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     app: open-webui
+ template:
+   metadata:
+     labels:
+       app: open-webui
+   spec:
+     serviceAccountName: webui
+     automountServiceAccountToken: false
+     containers:
+       - name: open-webui
+         image: ghcr.io/open-webui/open-webui:main
+         ports:
+           - containerPort: 8080
+             protocol: TCP
+         env:
+           - name: OLLAMA_BASE_URL
+             value: "http://ollama-service.ollama-operator:11434"
+           - name: OLLAMA_API_BASE_URL
+             value: "http://ollama-service.ollama-operator:11434/api"
