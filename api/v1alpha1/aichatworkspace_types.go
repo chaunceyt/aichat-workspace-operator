@@ -31,6 +31,8 @@ type AIChatWorkspaceSpec struct {
 
 // AIChatWorkspaceStatus defines the observed state of AIChatWorkspace.
 type AIChatWorkspaceStatus struct {
+	IsCreated bool `json:"isCreated,omitempty"`
+
 	// Represents the observations of a AIChatWorkspace's current state.
 	// AIChatWorkspace.status.conditions.type are: "Available", "Progressing", and "Degraded"
 	// AIChatWorkspace.status.conditions.status are one of True, False, Unknown.

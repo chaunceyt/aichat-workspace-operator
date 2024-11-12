@@ -110,6 +110,8 @@ spec:
                   - type
                   type: object
                 type: array
+              isCreated:
+                type: boolean
             type: object
         type: object
     served: true
