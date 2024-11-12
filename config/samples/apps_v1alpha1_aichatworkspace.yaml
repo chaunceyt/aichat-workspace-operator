@@ -6,4 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: aichatworkspace-sample
 spec:
-  # TODO(user): Add fields here
+  workspaceName: aichat-sample
+  models:
+    - gemma2:2b
+    - phi3
