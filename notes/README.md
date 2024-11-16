@@ -37,3 +37,5 @@ Once submitted and the environment created, the DNS address and instructions on 
 The API
 
 I would like to not have one interact with Kubernetes and was thinking of creating an API to create, update, or delete the AIChatWorkspace CR. Something simple, maybe a cli.
+
+- https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base
