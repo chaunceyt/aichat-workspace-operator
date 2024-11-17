@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -91,6 +92,18 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	case !isCreated && !pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "create")
+		var result *ctrl.Result
+		// ensureNamespace - ensure the namepace for the aichatworkspace is created.
+		// should match the workspacename
+		result, err = r.ensureNamespace(ctx, aichat, r.namespaceForAIChatWorkspace(aichat))
+		if result != nil {
+			return *result, err
+		}
+		// ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
+		result, err = r.ensurePVC(ctx, aichat, r.pvcForOpenWebUI(aichat))
+		if result != nil {
+			return *result, err
+		}
 
 		/**
 		  Create the following:
@@ -170,6 +183,9 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	case isCreated && pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "delete")
 		if controllerutil.ContainsFinalizer(aichat, aichatWorkspaceFinalizerName) {
+			if err = r.deleteAIChatWorkspace(ctx, aichat); err != nil {
+				return ctrl.Result{}, err
+			}
 			r.Recorder.Event(aichat, "Warning", "Deleting",
 				fmt.Sprintf("aichatWorkspace %s is being deleted from the namespace %s",
 					aichat.Name,
@@ -218,7 +234,10 @@ func (r *AIChatWorkspaceReconciler) patchStatus(ctx context.Context, aichat *app
 
 func (r *AIChatWorkspaceReconciler) namespaceForAIChatWorkspace(cr *appsv1alpha1.AIChatWorkspace) *corev1.Namespace {
 	namespace := &corev1.Namespace{
-
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   cr.Spec.WorkspaceName,
 			Labels: defaultLabels(cr, "namespace"),
@@ -231,8 +250,9 @@ func (r *AIChatWorkspaceReconciler) resourceQuotaForAIChatWorkspace(cr *appsv1al
 	resourcequota := &corev1.ResourceQuota{
 
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "resourcequota"),
+			Name:      cr.Spec.WorkspaceName,
+			Namespace: cr.Spec.WorkspaceName,
+			Labels:    defaultLabels(cr, "resourcequota"),
 		},
 	}
 	return resourcequota
@@ -242,8 +262,9 @@ func (r *AIChatWorkspaceReconciler) serviceAccountForOllama(cr *appsv1alpha1.AIC
 	sa := &corev1.ServiceAccount{
 
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "sa"),
+			Name:      workloadName(cr, "ollama-sa"),
+			Namespace: cr.Spec.WorkspaceName,
+			Labels:    defaultLabels(cr, "sa"),
 		},
 	}
 	return sa
@@ -253,8 +274,9 @@ func (r *AIChatWorkspaceReconciler) serviceAccountForOpenWebUI(cr *appsv1alpha1.
 	sa := &corev1.ServiceAccount{
 
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "sa"),
+			Name:      workloadName(cr, "openwebui-sa"),
+			Namespace: cr.Spec.WorkspaceName,
+			Labels:    defaultLabels(cr, "sa"),
 		},
 	}
 	return sa
@@ -264,7 +286,7 @@ func (r *AIChatWorkspaceReconciler) deploymentForOpenWebUI(cr *appsv1alpha1.AICh
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workloadName(cr, "openwebui"),
-			Namespace: cr.Namespace,
+			Namespace: cr.Spec.WorkspaceName,
 			Labels:    defaultLabels(cr, "deployment"),
 		},
 	}
@@ -277,7 +299,7 @@ func (r *AIChatWorkspaceReconciler) serviceForOpenWebUI(cr *appsv1alpha1.AIChatW
 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workloadName(cr, "openwebui"),
-			Namespace: cr.Namespace,
+			Namespace: cr.Spec.WorkspaceName,
 			Labels:    defaultLabels(cr, "service"),
 		},
 	}
@@ -289,7 +311,7 @@ func (r *AIChatWorkspaceReconciler) serviceForOllama(cr *appsv1alpha1.AIChatWork
 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
+			Namespace: cr.Spec.WorkspaceName,
 			Labels:    defaultLabels(cr, "srv"),
 		},
 	}
@@ -300,7 +322,7 @@ func (r *AIChatWorkspaceReconciler) statefulsetForOllama(cr *appsv1alpha1.AIChat
 	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
+			Namespace: cr.Spec.WorkspaceName,
 			Labels:    defaultLabels(cr, "sts"),
 		},
 	}
@@ -309,14 +331,27 @@ func (r *AIChatWorkspaceReconciler) statefulsetForOllama(cr *appsv1alpha1.AIChat
 }
 
 func (r *AIChatWorkspaceReconciler) pvcForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *corev1.PersistentVolumeClaim {
+	var storageSize = "2Gi"
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "statefulset"),
+			Name:      workloadName(cr, "openwebui-pvc"),
+			Namespace: cr.Spec.WorkspaceName,
+			Labels:    defaultLabels(cr, "pvc"),
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				"ReadWriteOnce",
+			},
+
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse(storageSize),
+				},
+			},
 		},
 	}
-
+	controllerutil.SetControllerReference(cr, pvc, r.Scheme)
 	return pvc
 }
 
@@ -349,4 +384,32 @@ func defaultLabels(cr *appsv1alpha1.AIChatWorkspace, component string) map[strin
 
 func workloadName(cr *appsv1alpha1.AIChatWorkspace, workloadType string) string {
 	return cr.Spec.WorkspaceName + "-" + workloadType
+}
+
+// deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.
+// deleting the namespace ensure each of the objects created was deleted.
+//   - resourcequota
+//   - serviceaccount for ollama api
+//   - serviceaccount for openwebui
+//   - statefulset for Ollama API
+//   - service for Ollama API
+//   - deployment for Open WebUI
+//   - service for Open WebUI
+//   - ingress for Open WebUI
+func (r *AIChatWorkspaceReconciler) deleteAIChatWorkspace(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace) error {
+	logger := log.FromContext(ctx)
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: instance.Spec.WorkspaceName,
+		},
+	}
+	err := r.Delete(context.TODO(), namespace)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("deleted aichatworkspace", "aichatworkspace", instance.Spec.WorkspaceName, "action", "deleted")
+
+	return nil
 }
