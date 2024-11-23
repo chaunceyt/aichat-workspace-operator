@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Globe with Three.js</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Texture loader and material
+    const textureLoader = new THREE.TextureLoader();
+    const earthTexture = textureLoader.load('https://threejsfundamentals.org/threejs/resources/images/earth.jpg'); // Placeholder Earth texture
+
+    // Sphere geometry and mesh
+    const geometry = new THREE.SphereGeometry(1, 64, 64); // 64 segments for high detail
+    const material = new THREE.MeshPhongMaterial({ map: earthTexture });
+    const globe = new THREE.Mesh(geometry, material);
+    scene.add(globe);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(1, 1, 1).normalize();
+    scene.add(directionalLight);
+
+    // Camera position
+    camera.position.z = 2;
+
+    // Animation function
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotate the globe around its Y-axis
+        globe.rotation.y += 0.005;
+
+        renderer.render(scene, camera);
+    }
+
+    // Handle window resizing
+    window.addEventListener('resize', () => {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+    });
+
+    animate(); // Start the animation loop
+</script>
+</body>
+</html>

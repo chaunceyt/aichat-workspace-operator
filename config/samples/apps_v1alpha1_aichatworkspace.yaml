@@ -10,4 +10,4 @@ spec:
   workspaceName: aichat-sample
   models:
     - gemma2:2b
-    - phi3
+    - phi3:3b

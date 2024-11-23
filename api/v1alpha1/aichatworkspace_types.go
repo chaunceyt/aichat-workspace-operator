@@ -47,6 +47,7 @@ type AIChatWorkspaceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
 // AIChatWorkspace is the Schema for the aichatworkspaces API.
 type AIChatWorkspace struct {
