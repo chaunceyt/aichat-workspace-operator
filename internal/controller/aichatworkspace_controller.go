@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
-	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/k8s"
 )
 
 const (
@@ -93,57 +92,12 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	case !isCreated && !pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "create")
+
+		// handleReconcile - creates the aichatworkspace.
 		var result *ctrl.Result
-		/**
-		  Create the following:
-		  some derived from https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base
-		  - namespace
-		  - resourcequota
-		  - serviceaccount for ollama api
-		  - serviceaccount for openwebui
-		  - statefulset for Ollama API
-		  - service for Ollama API
-		  - deployment for Open WebUI
-		  - service for Open WebUI
-		  - ingress for Open WebUI
-		**/
-
-		// ensureNamespace - ensure the namepace for the aichatworkspace is created.
-		// should match the workspacename
-		result, err = r.ensureNamespace(ctx, aichat, k8s.NewNamespace(aichat.Spec.WorkspaceName))
+		result, err = r.handleReconcile(ctx, result, aichat)
 		if result != nil {
-			return *result, err
-		}
-
-		//ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
-		pvcName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, "2Gi"))
-		if result != nil {
-			return *result, err
-		}
-
-		serviceAccountForOpenWebUIName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOpenWebUIName, aichat.Spec.WorkspaceName))
-		if result != nil {
-			return *result, err
-		}
-
-		serviceAccountForOllamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-		result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOllamaName, aichat.Spec.WorkspaceName))
-		if result != nil {
-			return *result, err
-		}
-
-		ollamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-		result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, 8080))
-		if result != nil {
-			return *result, err
-		}
-
-		openwebuiName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, 8080))
-		if result != nil {
-			return *result, err
+			return r.finishReconcile(err, true)
 		}
 
 		aichat.Status.IsCreated = true
@@ -188,38 +142,12 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "no-op")
 	case isCreated && !pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "update")
+
+		// handleReconcile - reconciles changes to the aichatworkspace.
 		var result *ctrl.Result
-		// run ensure<Component> func(s) to manage the re-creation and reconcile of each component
-		// namespace, serviceaccount, statefulset, deployment, service, ingress, pvc
-		//ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
-		pvcName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, "2Gi"))
+		result, err = r.handleReconcile(ctx, result, aichat)
 		if result != nil {
-			return *result, err
-		}
-
-		serviceAccountForOpenWebUIName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOpenWebUIName, aichat.Spec.WorkspaceName))
-		if result != nil {
-			return *result, err
-		}
-
-		serviceAccountForOllamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-		result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOllamaName, aichat.Spec.WorkspaceName))
-		if result != nil {
-			return *result, err
-		}
-
-		ollamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-		result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, 8080))
-		if result != nil {
-			return *result, err
-		}
-
-		openwebuiName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-		result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, 8080))
-		if result != nil {
-			return *result, err
+			return r.finishReconcile(err, true)
 		}
 
 	case isCreated && pendingDeletion:

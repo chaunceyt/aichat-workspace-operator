@@ -4,6 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // NewNamespace returns new K8S namespace
@@ -54,6 +55,26 @@ func NewPersistentVolumeClaim(name string, namespace string, storageSize string)
 					corev1.ResourceStorage: resource.MustParse(storageSize),
 				},
 			},
+		},
+	}
+}
+
+func NewService(namespace string, name string, port int32) *corev1.Service {
+	appLabels := map[string]string{defaultNameLabel: name}
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    appLabels,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: appLabels,
+			Ports: []corev1.ServicePort{{
+				Protocol:   corev1.ProtocolTCP,
+				Port:       port,
+				TargetPort: intstr.FromInt32(port),
+			}},
+			Type: corev1.ServiceTypeClusterIP,
 		},
 	}
 }

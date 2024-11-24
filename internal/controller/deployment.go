@@ -42,5 +42,42 @@ func (r *AIChatWorkspaceReconciler) ensureDeployment(ctx context.Context, instan
 		return &ctrl.Result{}, err
 	}
 
+	// TODO: implement checks for deployment and sts
+	// Check for any changes and redeployment
+	// applyChange := false
+
+	// // Ensure the deployment size is same as the spec
+	// size := int32(1)
+	// if deploy.Spec.Replicas != &size {
+	// 	deploy.Spec.Replicas = &size
+	// 	applyChange = true
+	// }
+
+	// // Ensure image name is correct, update image if required
+	// image := "nginx:1.26.2"
+	// var currentImage string = ""
+
+	// if found.Spec.Template.Spec.Containers != nil {
+	//	currentImage = found.Spec.Template.Spec.Containers[0].Image
+	// }
+
+	// if image != currentImage {
+	//	deploy.Spec.Template.Spec.Containers[0].Image = image
+	//	applyChange = true
+	// }
+
+	// if applyChange {
+	// 	fmt.Println("image: ", image, "found: ", currentImage)
+	// }
+
+	// if applyChange {
+	// 	err = r.Update(context.TODO(), deploy)
+	// 	if err != nil {
+	// 		logger.Error(err, "Failed to update Deployment.", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
+	// 		return &ctrl.Result{}, err
+	// 	}
+	// 	logger.Info("Updated Deployment to desired state.")
+	// }
+
 	return nil, nil
 }
