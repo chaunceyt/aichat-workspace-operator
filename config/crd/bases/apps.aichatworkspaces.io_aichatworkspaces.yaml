@@ -44,11 +44,17 @@ spec:
                 items:
                   type: string
                 type: array
+              workspaceENV:
+                type: string
               workspaceName:
                 description: The name of the workspace.
                 type: string
+                x-kubernetes-validations:
+                - message: WorkspaceName is immutable
+                  rule: self == oldSelf
             required:
             - models
+            - workspaceENV
             - workspaceName
             type: object
           status:

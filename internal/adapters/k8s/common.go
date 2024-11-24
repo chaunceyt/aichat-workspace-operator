@@ -8,20 +8,21 @@ import (
 )
 
 // NewNamespace returns new K8S namespace
-func NewNamespace(name string) *corev1.Namespace {
+func NewNamespace(name string, appLabels map[string]string) *corev1.Namespace {
 	return &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:   name,
+			Labels: appLabels,
 		},
 	}
 }
 
 // NewServiceAccount returns new K8S service account
-func NewServiceAccount(name string, namespace string) *corev1.ServiceAccount {
+func NewServiceAccount(name string, namespace string, appLabels map[string]string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
@@ -30,11 +31,12 @@ func NewServiceAccount(name string, namespace string) *corev1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    appLabels,
 		},
 	}
 }
 
-func NewPersistentVolumeClaim(name string, namespace string, storageSize string) *corev1.PersistentVolumeClaim {
+func NewPersistentVolumeClaim(name string, namespace string, storageSize string, appLabels map[string]string) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
@@ -43,6 +45,7 @@ func NewPersistentVolumeClaim(name string, namespace string, storageSize string)
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    appLabels,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 
@@ -59,8 +62,7 @@ func NewPersistentVolumeClaim(name string, namespace string, storageSize string)
 	}
 }
 
-func NewService(namespace string, name string, port int32) *corev1.Service {
-	appLabels := map[string]string{defaultNameLabel: name}
+func NewService(namespace string, name string, port int32, appLabels map[string]string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -68,7 +70,9 @@ func NewService(namespace string, name string, port int32) *corev1.Service {
 			Labels:    appLabels,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: appLabels,
+			Selector: map[string]string{
+				"app.kubernetes.io/name": name,
+			},
 			Ports: []corev1.ServicePort{{
 				Protocol:   corev1.ProtocolTCP,
 				Port:       port,

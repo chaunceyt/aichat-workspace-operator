@@ -23,7 +23,12 @@ import (
 // AIChatWorkspaceSpec defines the desired state of AIChatWorkspace.
 type AIChatWorkspaceSpec struct {
 	// The name of the workspace.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="WorkspaceName is immutable"
 	WorkspaceName string `json:"workspaceName"`
+
+	// +kubebuilder:validation:default:=dev
+	WorkspaceEnv string `json:"workspaceENV"`
 
 	// List of default models for this workspace.
 	Models []string `json:"models"`

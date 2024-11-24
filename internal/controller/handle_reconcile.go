@@ -16,6 +16,7 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	logger.Info("reconciling aichatworkspace")
 
 	/**
+	  AIChat Workspace
 	  Create the following:
 	  some derived from https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base
 	  - namespace
@@ -29,48 +30,65 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	  - ingress for Open WebUI
 	**/
 
-	result, err = r.ensureNamespace(ctx, aichat, k8s.NewNamespace(aichat.Spec.WorkspaceName))
+	// ensureNamespace - create the "aichatworkspace" namespace that contains all the components required
+	// to run the AIChat Workspace.
+	namespaceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, "aichatworkspace")
+	result, err = r.ensureNamespace(ctx, aichat, k8s.NewNamespace(aichat.Spec.WorkspaceName, namespaceDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
-	//ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
+	// ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
 	pvcName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, "2Gi"))
+	openwebuiPVCLabels := defaultLabels(aichat.Spec.WorkspaceName, pvcName, "sa")
+	result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, "2Gi", openwebuiPVCLabels))
 	if result != nil {
 		return result, err
 	}
 
+	// serviceAccount for the Open WebUI workload.
 	serviceAccountForOpenWebUIName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOpenWebUIName, aichat.Spec.WorkspaceName))
+	openwebuiDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOpenWebUIName, "sa")
+	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOpenWebUIName, aichat.Spec.WorkspaceName, openwebuiDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
+	// serviceAccout for the Ollama workload
 	serviceAccountForOllamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOllamaName, aichat.Spec.WorkspaceName))
+	ollamaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOllamaName, "sa")
+	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOllamaName, aichat.Spec.WorkspaceName, ollamaDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
+	// ensureStatefulSet - creating the StatefulSet used to run the Ollama API
 	ollamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, 11434, 20))
+	ollamaContainerPort := int32(11434)
+	ollamaVolumeSize := int32(20)
+	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, ollamaContainerPort, ollamaVolumeSize))
 	if result != nil {
 		return result, err
 	}
 
-	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, ollamaName, int32(11434)))
+	// ensureService - creating the Service used to route traffic to the Ollama API pod.
+	ollamaServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, ollamaName, "svc")
+	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, ollamaName, ollamaContainerPort, ollamaServiceDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
+	// ensureDeployment - creating the Deployment used to the Open WebUI workload.
 	openwebuiName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, 8080))
+	openwebuiContainerPort := int32(8080)
+	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, openwebuiContainerPort))
 	if result != nil {
 		return result, err
 	}
 
-	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, openwebuiName, int32(8080)))
+	// ensureService - creating the Service used to route traffic to the Open WebUI pod.
+	openwebuiServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, ollamaName, "svc")
+	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, openwebuiName, openwebuiContainerPort, openwebuiServiceDefaultLabels))
 	if result != nil {
 		return result, err
 	}

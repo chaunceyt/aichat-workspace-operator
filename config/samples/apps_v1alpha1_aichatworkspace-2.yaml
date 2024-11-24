@@ -5,9 +5,10 @@ metadata:
     app.kubernetes.io/name: aichat-workspace-operator
     app.kubernetes.io/managed-by: kustomize
   name: aichatworkspace-team-a
-  namespace: aichat-workspace-operator
+  namespace: aichat-workspace-operator-system
 spec:
   workspaceName: team-a-aichat
+  workspaceENV: dev
   models:
     - gemma2:2b
-    - phi3
+    - phi3.5

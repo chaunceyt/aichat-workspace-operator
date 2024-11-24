@@ -39,6 +39,7 @@ import (
 const (
 	ReconcileErrorInterval   = 10 * time.Second
 	ReconcileSuccessInterval = 30 * time.Second
+	reconcileStarted         = "staring reconcile"
 )
 
 // AIChatWorkspaceReconciler reconciles a AIChatWorkspace object
@@ -51,8 +52,10 @@ type AIChatWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts;events,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts,verbs=*
+// +kubebuilder:rbac:groups="",resources=events,verbs=create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -64,7 +67,8 @@ type AIChatWorkspaceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name)
+	logger.Info(reconcileStarted)
 	var err error
 
 	logger.Info("starting reconciling aichatworkspace")
@@ -112,7 +116,7 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			})
 			if err = r.patchStatus(ctx, aichat); err != nil {
 				err = fmt.Errorf("unable to patch status after progressing: %w", err)
-				return ctrl.Result{Requeue: true}, err
+				return r.finishReconcile(err, true)
 			}
 		}
 		apimeta.SetStatusCondition(&aichat.Status.Conditions, metav1.Condition{
@@ -132,7 +136,7 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		if err = r.patchStatus(ctx, aichat); err != nil {
 			err = fmt.Errorf("unable to patch status after progressing: %w", err)
-			return ctrl.Result{Requeue: true}, err
+			return r.finishReconcile(err, true)
 		}
 		r.Recorder.Event(aichat, "Normal", "Created",
 			fmt.Sprintf("aichatWorkspace %s was created in namespace %s",
@@ -210,14 +214,16 @@ func createInt32(x int32) *int32 {
 	return &x
 }
 
-func defaultLabels(cr *appsv1alpha1.AIChatWorkspace, component string) map[string]string {
+func defaultLabels(namespace string, name string, component string) map[string]string {
+	partOf := fmt.Sprintf("aichat-workspace-%s", namespace)
+
 	return map[string]string{
-		"app.kubernetes.io/name":      cr.Name,
-		"app.kubernetes.io/part-of":   "part-of",
-		"app.kubernetes.io/component": component,
-		"app.kubernetes.io/version":   "version",
-		"release":                     "release",
-		"provider":                    "aichatworkspace-operator",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    partOf,
+		"app.kubernetes.io/component":  component,
+		"app.kubernetes.io/version":    "version",
+		"app.kubernetes.io/managed-by": "aichat-workspace-operator",
+		"aichatworkspace":              namespace,
 	}
 }
 
