@@ -21,10 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pingcap/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +39,7 @@ import (
 const (
 	ReconcileErrorInterval   = 10 * time.Second
 	ReconcileSuccessInterval = 30 * time.Second
+	reconcileStarted         = "staring reconcile"
 )
 
 // AIChatWorkspaceReconciler reconciles a AIChatWorkspace object
@@ -52,6 +52,10 @@ type AIChatWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/finalizers,verbs=update
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts,verbs=*
+// +kubebuilder:rbac:groups="",resources=events,verbs=create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -63,7 +67,8 @@ type AIChatWorkspaceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name)
+	logger.Info(reconcileStarted)
 	var err error
 
 	logger.Info("starting reconciling aichatworkspace")
@@ -92,36 +97,12 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	case !isCreated && !pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "create")
 
-		/**
-		  Create the following:
-		  some derived from https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base
-		  - namespace
-		  - resourcequota
-		  - serviceaccount for ollama api
-		  - serviceaccount for openwebui
-		  - statefulset for Ollama API
-		  - service for Ollama API
-		  - deployment for Open WebUI
-		  - service for Open WebUI
-		  - ingress for Open WebUI
-		**/
-
-		// run ensure<Component> func(s) to manage the creation and reconcile of each component
-		// namespace, serviceaccount, statefulset, deployment, service, ingress, pvc
-		namespace := r.namespaceForAIChatWorkspace(aichat)
-		resourcequota := r.resourceQuotaForAIChatWorkspace(aichat)
-		fmt.Println(namespace, resourcequota)
-
-		ollamaServiceAccount := r.serviceAccountForOllama(aichat)
-		ollamaAPI := r.statefulsetForOllama(aichat)
-		ollamaService := r.serviceForOllama(aichat)
-		fmt.Println(ollamaServiceAccount, ollamaAPI, ollamaService)
-
-		openwebuiServiceAccount := r.serviceAccountForOpenWebUI(aichat)
-		openwebuiDeployment := r.deploymentForOpenWebUI(aichat)
-		openwebuiService := r.serviceForOpenWebUI(aichat)
-		openwebuiIngress := r.ingressForOpenWebUI(aichat)
-		fmt.Println(openwebuiServiceAccount, openwebuiDeployment, openwebuiService, openwebuiIngress)
+		// handleReconcile - creates the aichatworkspace.
+		var result *ctrl.Result
+		result, err = r.handleReconcile(ctx, result, aichat)
+		if result != nil {
+			return r.finishReconcile(err, true)
+		}
 
 		aichat.Status.IsCreated = true
 
@@ -135,7 +116,7 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			})
 			if err = r.patchStatus(ctx, aichat); err != nil {
 				err = fmt.Errorf("unable to patch status after progressing: %w", err)
-				return ctrl.Result{Requeue: true}, err
+				return r.finishReconcile(err, true)
 			}
 		}
 		apimeta.SetStatusCondition(&aichat.Status.Conditions, metav1.Condition{
@@ -155,7 +136,7 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		if err = r.patchStatus(ctx, aichat); err != nil {
 			err = fmt.Errorf("unable to patch status after progressing: %w", err)
-			return ctrl.Result{Requeue: true}, err
+			return r.finishReconcile(err, true)
 		}
 		r.Recorder.Event(aichat, "Normal", "Created",
 			fmt.Sprintf("aichatWorkspace %s was created in namespace %s",
@@ -165,11 +146,20 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "no-op")
 	case isCreated && !pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "update")
-		// run ensure<Component> func(s) to manage the re-creation and reconcile of each component
-		// namespace, serviceaccount, statefulset, deployment, service, ingress, pvc
+
+		// handleReconcile - reconciles changes to the aichatworkspace.
+		var result *ctrl.Result
+		result, err = r.handleReconcile(ctx, result, aichat)
+		if result != nil {
+			return r.finishReconcile(err, true)
+		}
+
 	case isCreated && pendingDeletion:
 		logger.Info("reconciling aichat", "aichat", aichat, "action", "delete")
 		if controllerutil.ContainsFinalizer(aichat, aichatWorkspaceFinalizerName) {
+			if err = r.deleteAIChatWorkspace(ctx, aichat); err != nil {
+				return ctrl.Result{}, err
+			}
 			r.Recorder.Event(aichat, "Warning", "Deleting",
 				fmt.Sprintf("aichatWorkspace %s is being deleted from the namespace %s",
 					aichat.Name,
@@ -181,13 +171,17 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return r.finishReconcile(err, false)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AIChatWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv1alpha1.AIChatWorkspace{}).
+		Owns(&corev1.Namespace{}).
+		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.StatefulSet{}).
 		Named("aichatworkspace").
 		Complete(r)
 }
@@ -216,137 +210,55 @@ func (r *AIChatWorkspaceReconciler) patchStatus(ctx context.Context, aichat *app
 	return r.Client.Status().Patch(ctx, aichat, client.MergeFrom(latest))
 }
 
-func (r *AIChatWorkspaceReconciler) namespaceForAIChatWorkspace(cr *appsv1alpha1.AIChatWorkspace) *corev1.Namespace {
-	namespace := &corev1.Namespace{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "namespace"),
-		},
-	}
-	return namespace
-}
-
-func (r *AIChatWorkspaceReconciler) resourceQuotaForAIChatWorkspace(cr *appsv1alpha1.AIChatWorkspace) *corev1.ResourceQuota {
-	resourcequota := &corev1.ResourceQuota{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "resourcequota"),
-		},
-	}
-	return resourcequota
-}
-
-func (r *AIChatWorkspaceReconciler) serviceAccountForOllama(cr *appsv1alpha1.AIChatWorkspace) *corev1.ServiceAccount {
-	sa := &corev1.ServiceAccount{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "sa"),
-		},
-	}
-	return sa
-}
-
-func (r *AIChatWorkspaceReconciler) serviceAccountForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *corev1.ServiceAccount {
-	sa := &corev1.ServiceAccount{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   cr.Spec.WorkspaceName,
-			Labels: defaultLabels(cr, "sa"),
-		},
-	}
-	return sa
-}
-
-func (r *AIChatWorkspaceReconciler) deploymentForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *appsv1.Deployment {
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "openwebui"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "deployment"),
-		},
-	}
-	return deployment
-
-}
-
-func (r *AIChatWorkspaceReconciler) serviceForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *corev1.Service {
-	service := &corev1.Service{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "openwebui"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "service"),
-		},
-	}
-	return service
-}
-
-func (r *AIChatWorkspaceReconciler) serviceForOllama(cr *appsv1alpha1.AIChatWorkspace) *corev1.Service {
-	service := &corev1.Service{
-
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "srv"),
-		},
-	}
-	return service
-}
-
-func (r *AIChatWorkspaceReconciler) statefulsetForOllama(cr *appsv1alpha1.AIChatWorkspace) *appsv1.StatefulSet {
-	sts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "sts"),
-		},
-	}
-
-	return sts
-}
-
-func (r *AIChatWorkspaceReconciler) pvcForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *corev1.PersistentVolumeClaim {
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "ollama"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "statefulset"),
-		},
-	}
-
-	return pvc
-}
-
-func (r *AIChatWorkspaceReconciler) ingressForOpenWebUI(cr *appsv1alpha1.AIChatWorkspace) *networkingv1.Ingress {
-	ing := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      workloadName(cr, "openwebui"),
-			Namespace: cr.Namespace,
-			Labels:    defaultLabels(cr, "ingress"),
-		},
-	}
-
-	return ing
-}
-
 func createInt32(x int32) *int32 {
 	return &x
 }
 
-func defaultLabels(cr *appsv1alpha1.AIChatWorkspace, component string) map[string]string {
+func defaultLabels(namespace string, name string, component string) map[string]string {
+	partOf := fmt.Sprintf("aichat-workspace-%s", namespace)
+
 	return map[string]string{
-		"app.kubernetes.io/name":      cr.Name,
-		"app.kubernetes.io/part-of":   "part-of",
-		"app.kubernetes.io/component": component,
-		"app.kubernetes.io/version":   "version",
-		"release":                     "release",
-		"provider":                    "aichatworkspace-operator",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    partOf,
+		"app.kubernetes.io/component":  component,
+		"app.kubernetes.io/version":    "version",
+		"app.kubernetes.io/managed-by": "aichat-workspace-operator",
+		"aichatworkspace":              namespace,
 	}
 }
 
 func workloadName(cr *appsv1alpha1.AIChatWorkspace, workloadType string) string {
 	return cr.Spec.WorkspaceName + "-" + workloadType
+}
+
+// deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.
+// deleting the namespace ensure each of the objects created was deleted.
+//   - resourcequota
+//   - serviceaccount for ollama api
+//   - serviceaccount for openwebui
+//   - statefulset for Ollama API
+//   - service for Ollama API
+//   - deployment for Open WebUI
+//   - service for Open WebUI
+//   - ingress for Open WebUI
+func (r *AIChatWorkspaceReconciler) deleteAIChatWorkspace(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace) error {
+	logger := log.FromContext(ctx)
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: instance.Spec.WorkspaceName,
+		},
+	}
+	err := r.Delete(context.TODO(), namespace)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("deleted aichatworkspace", "aichatworkspace", instance.Spec.WorkspaceName, "action", "deleted")
+
+	return nil
+}
+
+func generateName(workspace, name string) string {
+	return fmt.Sprintf("%s-%s", workspace, name)
 }

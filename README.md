@@ -1,117 +1,57 @@
 # AIChat Workspace Operator
 
-Creating AIChat Workspaces, using [Open WebUI](https://openwebui.com/) as the front-end to [Ollama](https://ollama.com/).
+Create AIChat Workspaces, using [Open WebUI](https://openwebui.com/) as the front-end to [Ollama](https://ollama.com/).
 
 ## Description
 
-A Kubernetes Operator, that will create the components needed to run Open WebUI with Ollama as the backend API for interacting with LLMs.
-This will use a multi-tennant pattern. Each AIChat Workspace will be isolated using a namespace.
+Many companies require an assignment, so they can see how one would solve a probem they have defined, during the interview process.
 
-## Getting Started
+This is a pre self-assignment:
+- Write an Kubernetes Operator that manages an application.
+- Write an API that handles the CRUD for the CR built.
 
-### Prerequisites
-- go version v1.22.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+The operator will create each component needed to run what an AIChat Workspace. Consisting of components defined in this [git repo](https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base) along with a couple of more objects (i.e. serviceaccounts)
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+The API will be a front-end to the operator. Removing the need for direct interaction with Kubernetes, providing all of the CRUD actions needed to manage an `kind: AIChatWorkspace`
 
-```sh
-make docker-build docker-push IMG=<some-registry>/aichat-workspace-operator:tag
-```
+When a `kind: AIChatWorkspace` is submitted, the following objects will be created.
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+### ResourceQuota
+Since several AIChatWorkspaces may share a cluster with a fixed number of nodes, there could be a concern that one workspace could use more than its fair share of cluster resources.
 
-**Install the CRDs into the cluster:**
+Resource quotas will be used to address the resources usage per tenant (namespace).
 
-```sh
-make install
-```
+### ServiceAccounts
+To ensure each workload created doesn't get attached to the `default` service account in the namespace created for the workspace, for each workload the operator will create a serviceaccont specific for the pod.
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+- serviceaccount for ollama api
+- serviceaccount for openwebui
 
-```sh
-make deploy IMG=<some-registry>/aichat-workspace-operator:tag
-```
+### StatefulSet (Ollama API)
+A StatefulSet will run the Ollama API along with a Kubernetes Service to route traffic to the pod.
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+- statefulset for Ollama API
+- service for Ollama API
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+### Deployment (Open WebUI)
+A Deployment will run the Open WebUI workload along with a Kubernetes Ingress and Service to route traffic to the pod.
 
-```sh
-kubectl apply -k config/samples/
-```
+- deployment for Open WebUI
+- service for Open WebUI
+- ingress for Open WebUI
 
->**NOTE**: Ensure that the samples has default values to test it out.
+## Minimum viable product
 
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
+The goal of this self-assignment is to show an ability to devlop solution around the stated [git repo](https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base) , implement a pattern for testing the solution e2e, implement automation to deploy to "production".
 
-```sh
-kubectl delete -k config/samples/
-```
+MVP = the ability to create an `kind: AIChatWorkspace` and connect to the workspace via the ingress endpoint or port-forward with `ENV=dev` set using `kustomize build config/samples/ | kubectl -n aichat-workspace-operator-system apply -f -`.
 
-**Delete the APIs(CRDs) from the cluster:**
+##  After getting started
 
-```sh
-make uninstall
-```
+Initial work on the self-assignment...
 
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following are the steps to build the installer and distribute this project to users.
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/aichat-workspace-operator:tag
-```
-
-NOTE: The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without
-its dependencies.
-
-2. Using the installer
-
-Users can just run kubectl apply -f <URL for YAML BUNDLE> to install the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/aichat-workspace-operator/<tag or branch>/dist/install.yaml
-```
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2024.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
+- Set a goal to leverage some of the stated benefits of a Domain Driven, Data Oriented Architecture building this operator.
+- Identified initial Kubebuilder [workflow](notes/kubebuilder-workflow.md)
+- Implemented the [AIChatWorkspaceSpec](api/v1alpha1/aichatworkspace_types.go)
+- Implemented the [Reconcile](internal/controller/) logic
+- At time of writing this line, the MVP is achieved, submitting a CR manifest results in stated items being created. One can port-forward and download a Model and submit a prompt, which will result in a reply from the LLM.

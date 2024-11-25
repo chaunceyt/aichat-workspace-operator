@@ -56,3 +56,19 @@ make run
 kubectl create ns a-team
 kustomize build config/samples/ | kubectl -n a-team apply -f -
 ```
+
+## Rebuild environment
+
+```
+#!/bin/bash
+
+kind delete cluster
+sleep 1
+kind create cluster
+sleep 1
+make generate
+make manifests
+make install
+IMG=aichatworkspace:v1 make docker-build
+kind load docker-image aichatworkspace:v1
+```
