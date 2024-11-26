@@ -15,21 +15,6 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	var err error
 	logger.Info("reconciling aichatworkspace")
 
-	/**
-	  AIChat Workspace
-	  Create the following:
-	  some derived from https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base
-	  - namespace
-	  - resourcequota
-	  - serviceaccount for ollama api
-	  - serviceaccount for openwebui
-	  - statefulset for Ollama API
-	  - service for Ollama API
-	  - deployment for Open WebUI
-	  - service for Open WebUI
-	  - ingress for Open WebUI
-	**/
-
 	// ensureNamespace - create the "aichatworkspace" namespace that contains all the components required
 	// to run the AIChat Workspace.
 	namespaceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, "aichatworkspace")
@@ -87,7 +72,7 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	}
 
 	// ensureService - creating the Service used to route traffic to the Open WebUI pod.
-	openwebuiServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, ollamaName, "svc")
+	openwebuiServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, openwebuiName, "svc")
 	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, openwebuiName, openwebuiContainerPort, openwebuiServiceDefaultLabels))
 	if result != nil {
 		return result, err

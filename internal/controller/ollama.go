@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/ollama"
 )
 
 // ensureStatefulSet ensures the Ollama service is created and running as a StatefulSet.
@@ -45,15 +46,34 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		return &ctrl.Result{}, err
 	}
 
+	// ensure ollama is running.
+	// it needs to be running in order to pull in the instance.Spec.Models
 	ollamaRunning := r.isOllamaUp(ctx, instance)
 	if !ollamaRunning {
-		// If Ollama isn't running yet, requeue the ctrl
-		// to run again after a delay
 		delay := time.Second * time.Duration(5)
-
 		logger.Info(fmt.Sprintf("Ollama isn't running, waiting for %s", delay))
 
 		return &ctrl.Result{RequeueAfter: delay}, nil
+	}
+
+	// ensure the instance.Spec.Models are available.
+	serviceName := fmt.Sprintf("%s-ollama", instance.Spec.WorkspaceName)
+	ollamaPort := int64(11434)
+
+	for _, llm := range instance.Spec.Models {
+		ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, instance.Spec.WorkspaceName, ollamaPort)
+		ok, err := ollama.DoesModelExist(llm, ollamaServerURI)
+		if err != nil {
+			return &ctrl.Result{}, err
+		}
+		if !ok {
+			fmt.Printf("The %s LLM does not exist. Starting the ollama pull ...\n", llm)
+			err = ollama.PullModel(llm, ollamaServerURI)
+			if err != nil {
+				logger.Error(err, "Failed to pull Model", "ModelName", llm, "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
+				return &ctrl.Result{}, err
+			}
+		}
 	}
 
 	return nil, nil

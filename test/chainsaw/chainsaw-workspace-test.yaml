@@ -1,0 +1,99 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aichatworkspace-test
+spec:
+  steps:
+  - try:
+    - apply:
+        file: test/chainsaw/workspace.yaml
+    - assert:
+        file: test/chainsaw/workspace.yaml
+    - assert:
+        resource:
+         apiVersion: v1
+         kind: Namespace
+         metadata:
+           name: aichat-e2e
+           labels:
+             aichatworkspace: aichat-e2e
+             app.kubernetes.io/component: aichatworkspace
+             app.kubernetes.io/managed-by: aichat-workspace-operator
+             app.kubernetes.io/name: aichat-e2e
+             app.kubernetes.io/part-of: aichat-workspace-aichat-e2e
+             app.kubernetes.io/version: version
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: aichat-e2e-openwebui
+            namespace: aichat-e2e
+          spec:
+            replicas: 1    
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: aichat-e2e-ollama
+            namespace: aichat-e2e
+          spec:
+            replicas: 1
+    - assert:
+        resource:
+         apiVersion: v1
+         kind: ServiceAccount
+         metadata:
+           name: aichat-e2e-ollama
+           namespace: aichat-e2e  
+           labels:
+             aichatworkspace: aichat-e2e
+             app.kubernetes.io/component: sa
+             app.kubernetes.io/managed-by: aichat-workspace-operator
+             app.kubernetes.io/name: aichat-e2e-ollama
+             app.kubernetes.io/part-of: aichat-workspace-aichat-e2e
+             app.kubernetes.io/version: version
+    - assert:
+        resource:
+         apiVersion: v1
+         kind: ServiceAccount
+         metadata:
+           name: aichat-e2e-openwebui
+           namespace: aichat-e2e  
+           labels:
+             aichatworkspace: aichat-e2e
+             app.kubernetes.io/component: sa
+             app.kubernetes.io/managed-by: aichat-workspace-operator
+             app.kubernetes.io/name: aichat-e2e-openwebui
+             app.kubernetes.io/part-of: aichat-workspace-aichat-e2e
+             app.kubernetes.io/version: version
+    - assert:
+        resource:
+         apiVersion: v1
+         kind: Service
+         metadata:
+           name: aichat-e2e-openwebui
+           namespace: aichat-e2e  
+           labels:
+             aichatworkspace: aichat-e2e
+             app.kubernetes.io/component: svc
+             app.kubernetes.io/managed-by: aichat-workspace-operator
+             app.kubernetes.io/name: aichat-e2e-openwebui
+             app.kubernetes.io/part-of: aichat-workspace-aichat-e2e
+             app.kubernetes.io/version: version
+    - assert:
+        resource:
+         apiVersion: v1
+         kind: Service
+         metadata:
+           name: aichat-e2e-ollama
+           namespace: aichat-e2e  
+           labels:
+             aichatworkspace: aichat-e2e
+             app.kubernetes.io/component: svc
+             app.kubernetes.io/managed-by: aichat-workspace-operator
+             app.kubernetes.io/name: aichat-e2e-ollama
+             app.kubernetes.io/part-of: aichat-workspace-aichat-e2e
+             app.kubernetes.io/version: version
+
