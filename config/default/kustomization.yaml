@@ -32,14 +32,23 @@ resources:
 # Only CR(s) which requires webhooks and are applied on namespaces labeled with 'webhooks: enabled' will
 # be able to communicate with the Webhook Server.
 #- ../network-policy
+- mysql-secret.yaml
+- mysql-storage.yaml
+- mysql-deployment.yaml
+- mysql-service.yaml
+#- ollama-sts.yaml
+#- ollama-svc.yaml
 
+#- mysql-deployment.yaml
 # Uncomment the patches line if you enable Metrics, and/or are using webhooks and cert-manager
 patches:
+# https://github.com/kubernetes-sigs/kustomize/blob/master/examples/patchMultipleObjects.md
 # [METRICS] The following patch will enable the metrics endpoint using HTTPS and the port :8443.
 # More info: https://book.kubebuilder.io/reference/metrics
 - path: manager_metrics_patch.yaml
   target:
     kind: Deployment
+    name: controller-manager
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml

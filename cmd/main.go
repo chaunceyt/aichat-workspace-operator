@@ -21,6 +21,9 @@ import (
 	"flag"
 	"os"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -37,6 +40,7 @@ import (
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/controller"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/webapi"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -91,6 +95,23 @@ func main() {
 	if !enableHTTP2 {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
+
+	// enable pprof endpoint to analyze CPU and memory usage
+	// https://medium.com/@srajsonu/efficient-debugging-with-pprof-in-go-b2e63e4b167e
+	// http://localhost:6060/debug/pprof
+	// using port-forwading
+	// collect a 30s profile: go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+	// collect a heap go tool pprof http://localhost:6060/debug/pprof/heap
+	// collect goroutine profile go tool pprof http://localhost:6060/debug/pprof/goroutine
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
+
+	// StartWebAPI runs a Web/API service that interacts with the AIChat Workspace Operator
+	// Requires a mysql backend.
+	go func() {
+		webapi.StartWebAPI()
+	}()
 
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: tlsOpts,

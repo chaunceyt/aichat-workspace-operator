@@ -19,6 +19,7 @@ import (
 // ensureStatefulSet ensures the Ollama service is created and running as a StatefulSet.
 func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sts *appsv1.StatefulSet) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
 	found := &appsv1.StatefulSet{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
@@ -27,22 +28,22 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		// Create the StatefulSet
 		logger.Info("Creating a new StatefulSet", "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
+
 		controllerutil.SetControllerReference(instance, sts, r.Scheme)
 		err = r.Create(context.TODO(), sts)
 
 		if err != nil {
-			// Creation failed
 			logger.Error(err, "Failed to create new StatefulSet", "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
+
 			return &ctrl.Result{}, err
 		}
-		// Creation was successful
+
 		return nil, nil
 
 	} else if err != nil {
-		// Error that isn't due to the StatefulSet not existing
 		logger.Error(err, "Failed to get StatefulSet")
+
 		return &ctrl.Result{}, err
 	}
 
@@ -59,9 +60,9 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 	// ensure the instance.Spec.Models are available.
 	serviceName := fmt.Sprintf("%s-ollama", instance.Spec.WorkspaceName)
 	ollamaPort := int64(11434)
+	ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, instance.Spec.WorkspaceName, ollamaPort)
 
 	for _, llm := range instance.Spec.Models {
-		ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, instance.Spec.WorkspaceName, ollamaPort)
 		ok, err := ollama.DoesModelExist(llm, ollamaServerURI)
 		if err != nil {
 			return &ctrl.Result{}, err
@@ -73,8 +74,12 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 				logger.Error(err, "Failed to pull Model", "ModelName", llm, "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
 				return &ctrl.Result{}, err
 			}
+			ollama.CreateFromModelFile(llm, ollamaServerURI)
 		}
 	}
+
+	models, err := ollama.RunningModels(ollamaServerURI)
+	fmt.Println("Models Running: ", models)
 
 	return nil, nil
 }

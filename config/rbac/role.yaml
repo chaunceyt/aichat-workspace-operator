@@ -16,6 +16,7 @@ rules:
   - namespaces
   - persistentvolumeclaims
   - pods
+  - resourcequotas
   - serviceaccounts
   - services
   verbs:

@@ -23,6 +23,14 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 		return result, err
 	}
 
+	resourceQuotaName := generateName(aichat.Spec.WorkspaceName, "rquota")
+	resourceQuotaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, "resourceQuota")
+	result, err = r.ensureResourceQuota(ctx, aichat, k8s.NewResourceQuota(aichat.Spec.WorkspaceName, resourceQuotaName, resourceQuotaDefaultLabels))
+	// result, err = r.ensurer(ctx, aichat, k8s.NewResourceQuota(aichat.Spec.WorkspaceName, resourceQuotaName, resourceQuotaDefaultLabels))
+	if result != nil {
+		return result, err
+	}
+
 	// ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
 	pvcName := generateName(aichat.Spec.WorkspaceName, "openwebui")
 	openwebuiPVCLabels := defaultLabels(aichat.Spec.WorkspaceName, pvcName, "sa")

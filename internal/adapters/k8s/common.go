@@ -82,3 +82,24 @@ func NewService(namespace string, name string, port int32, appLabels map[string]
 		},
 	}
 }
+
+func NewResourceQuota(namespace string, name string, appLabels map[string]string) *corev1.ResourceQuota {
+	return &corev1.ResourceQuota{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ResourceQuota",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    appLabels,
+		},
+		Spec: corev1.ResourceQuotaSpec{
+			Hard: corev1.ResourceList{
+				"pods":                   resource.MustParse("2"),
+				"persistentvolumeclaims": resource.MustParse("2"),
+				"services":               resource.MustParse("5"),
+			},
+		},
+	}
+}

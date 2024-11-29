@@ -150,8 +150,14 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 					SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
 						{
-							Name:            ollamaContainerName,
-							Image:           containerImage,
+							Name:  ollamaContainerName,
+							Image: containerImage,
+							Env: []v1.EnvVar{
+								{
+									Name:  "OLLAMA_DEBUG",
+									Value: "1",
+								},
+							},
 							SecurityContext: defaultSecurityContext(),
 							Ports:           []v1.ContainerPort{{ContainerPort: port}},
 							TTY:             true,
