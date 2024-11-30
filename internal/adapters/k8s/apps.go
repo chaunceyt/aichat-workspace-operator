@@ -7,7 +7,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+
+	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/utils"
 )
 
 const (
@@ -54,7 +55,7 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					RestartPolicy:                v1.RestartPolicyAlways,
 					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: utils.PtrBool(false),
 					// at the moment having issues getting open webui to run as non-root
 					// SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
@@ -145,12 +146,18 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 				Spec: v1.PodSpec{
 					RestartPolicy:                v1.RestartPolicyAlways,
 					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: pointer.Bool(false),
+					AutomountServiceAccountToken: utils.PtrBool(false),
 					SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
 						{
-							Name:            ollamaContainerName,
-							Image:           containerImage,
+							Name:  ollamaContainerName,
+							Image: containerImage,
+							Env: []v1.EnvVar{
+								{
+									Name:  "OLLAMA_DEBUG",
+									Value: "1",
+								},
+							},
 							SecurityContext: defaultSecurityContext(),
 							Ports:           []v1.ContainerPort{{ContainerPort: port}},
 							TTY:             true,
@@ -171,15 +178,15 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 // defaultSecurityContext - sets the security context for each container
 func defaultSecurityContext() *v1.SecurityContext {
 	return &v1.SecurityContext{
-		AllowPrivilegeEscalation: pointer.Bool(false),
+		AllowPrivilegeEscalation: utils.PtrBool(false),
 		Capabilities: &v1.Capabilities{
 			Drop: []v1.Capability{
 				"ALL",
 			},
 		},
-		Privileged:             pointer.Bool(false),
-		ReadOnlyRootFilesystem: pointer.Bool(true),
-		RunAsNonRoot:           pointer.Bool(true),
+		Privileged:             utils.PtrBool(false),
+		ReadOnlyRootFilesystem: utils.PtrBool(true),
+		RunAsNonRoot:           utils.PtrBool(true),
 		SeccompProfile: &v1.SeccompProfile{
 			Type: v1.SeccompProfileType("RuntimeDefault"),
 		},
@@ -189,8 +196,8 @@ func defaultSecurityContext() *v1.SecurityContext {
 // defaultPodSecurityContext - sets the pod's security context
 func defaultPodSecurityContext() *v1.PodSecurityContext {
 	return &v1.PodSecurityContext{
-		FSGroup:    pointer.Int64(10001),
-		RunAsUser:  pointer.Int64(10001),
-		RunAsGroup: pointer.Int64(10001),
+		FSGroup:    utils.PtrInt64(10001),
+		RunAsUser:  utils.PtrInt64(10001),
+		RunAsGroup: utils.PtrInt64(10001),
 	}
 }

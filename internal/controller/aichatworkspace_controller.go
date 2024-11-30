@@ -54,7 +54,7 @@ type AIChatWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
-// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts;resourcequotas,verbs=*
 // +kubebuilder:rbac:groups="",resources=events,verbs=create
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -67,8 +67,8 @@ type AIChatWorkspaceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
 func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name)
-	logger.Info(reconcileStarted)
+	now := time.Now()
+	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name).WithValues("starting reconcile of aichatworkspace", time.Since(now))
 	var err error
 
 	logger.Info("starting reconciling aichatworkspace")
@@ -171,6 +171,11 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	// TODO
+	// Get list of pods and include to status
+	// Get list of running models and include in status
+	// Get df-h of PVC for ollama and include in status
+
 	return r.finishReconcile(err, false)
 }
 
@@ -179,7 +184,10 @@ func (r *AIChatWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv1alpha1.AIChatWorkspace{}).
 		Owns(&corev1.Namespace{}).
+		Owns(&corev1.ResourceQuota{}).
+		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Named("aichatworkspace").

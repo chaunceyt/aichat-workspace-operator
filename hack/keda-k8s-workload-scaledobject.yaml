@@ -1,0 +1,13 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: workload-scaledobject
+spec:
+  scaleTargetRef:
+    name: team-a-aichat-ollama
+    kind: StatefulSet
+  triggers:
+  - type: kubernetes-workload
+    metadata:
+      podSelector: 'app.kubernetes.io/name=team-a-aichat-openwebui'
+      value: '1'

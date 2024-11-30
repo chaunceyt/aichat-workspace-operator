@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ollama-ingress
+  labels:
+    app.kubernetes.io/instance: open-webui
+    app.kubernetes.io/component: ollama
+spec:
+  rules:
+  - host: team-a-aichat.ollama.localtest.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: team-a-aichat-ollama
+            port:
+              number: 11434

@@ -52,6 +52,11 @@ var _ = Describe("AIChatWorkspace Controller", func() {
 						Namespace: "default",
 					},
 					// TODO(user): Specify other spec details if needed.
+					Spec: appsv1alpha1.AIChatWorkspaceSpec{
+						WorkspaceName: "e2e-test",
+						WorkspaceEnv:  "dev",
+						Models:        []string{"gemma2:2b", "phi3.5:latest"},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

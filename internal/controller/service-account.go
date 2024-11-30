@@ -15,6 +15,7 @@ import (
 
 func (r *AIChatWorkspaceReconciler) ensureServiceAccount(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sa *corev1.ServiceAccount) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
 	found := &corev1.ServiceAccount{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
@@ -23,22 +24,22 @@ func (r *AIChatWorkspaceReconciler) ensureServiceAccount(ctx context.Context, in
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		// Create the ServiceAccount
-		logger.Info("Creating a new ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+		logger.Info("Creating a ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+
 		controllerutil.SetControllerReference(instance, sa, r.Scheme)
 		err = r.Create(context.TODO(), sa)
 
 		if err != nil {
-			// Creation failed
-			logger.Error(err, "Failed to create new ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+			logger.Error(err, "Failed to create ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+
 			return &ctrl.Result{}, err
 		}
-		// Creation was successful
+
 		return nil, nil
 
 	} else if err != nil {
-		// Error that isn't due to the ServiceAccount not existing
 		logger.Error(err, "Failed to get ServiceAccount")
+
 		return &ctrl.Result{}, err
 	}
 

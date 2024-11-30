@@ -15,6 +15,7 @@ import (
 
 func (r *AIChatWorkspaceReconciler) ensurePVC(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, pvc *corev1.PersistentVolumeClaim) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
 	found := &corev1.PersistentVolumeClaim{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
@@ -23,22 +24,20 @@ func (r *AIChatWorkspaceReconciler) ensurePVC(ctx context.Context, instance *app
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		// Create the PVC
 		logger.Info("Creating a new PVC", "PVC.Namespace", instance.Spec.WorkspaceName, "PVC.Name", pvc.Name)
 		controllerutil.SetControllerReference(instance, pvc, r.Scheme)
 		err = r.Create(context.TODO(), pvc)
 
 		if err != nil {
-			// Creation failed
 			logger.Error(err, "Failed to create new PVC", "PVC.Namespace", instance.Spec.WorkspaceName, "PVC.Name", pvc.Name)
 			return &ctrl.Result{}, err
 		}
-		// Creation was successful
+
 		return nil, nil
 
 	} else if err != nil {
-		// Error that isn't due to the pvc not existing
 		logger.Error(err, "Failed to get PVC")
+
 		return &ctrl.Result{}, err
 	}
 

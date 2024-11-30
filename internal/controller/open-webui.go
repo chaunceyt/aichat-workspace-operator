@@ -15,6 +15,7 @@ import (
 
 func (r *AIChatWorkspaceReconciler) ensureDeployment(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, deploy *appsv1.Deployment) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
 	found := &appsv1.Deployment{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{

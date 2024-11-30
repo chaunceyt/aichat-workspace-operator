@@ -15,6 +15,7 @@ import (
 
 func (r *AIChatWorkspaceReconciler) ensureNamespace(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, ns *corev1.Namespace) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+
 	found := &corev1.Namespace{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
@@ -22,22 +23,20 @@ func (r *AIChatWorkspaceReconciler) ensureNamespace(ctx context.Context, instanc
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		// Create the namespace
-		logger.Info("Creating a new Namespace", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
+		logger.Info("Creating the namespace", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
+
 		controllerutil.SetControllerReference(instance, ns, r.Scheme)
 		err = r.Create(context.TODO(), ns)
-
 		if err != nil {
-			// Creation failed
-			logger.Error(err, "Failed to create new Namespace", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
+			logger.Error(err, "Failed to create namespace", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
 			return &ctrl.Result{}, err
 		}
-		// Creation was successful
+
 		return nil, nil
 
 	} else if err != nil {
-		// Error that isn't due to the namespace not existing
 		logger.Error(err, "Failed to get namespace")
+
 		return &ctrl.Result{}, err
 	}
 

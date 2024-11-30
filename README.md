@@ -1,57 +1,73 @@
 # AIChat Workspace Operator
 
-Create AIChat Workspaces, using [Open WebUI](https://openwebui.com/) as the front-end to [Ollama](https://ollama.com/).
+Create AIChat Workspaces powered by [Open WebUI](https://openwebui.com/) and [Ollama](https://ollama.com/)
 
-## Description
+## Objectives
 
-Many companies require an assignment, so they can see how one would solve a probem they have defined, during the interview process.
+Create a Kubernetes Operator that creates the `control-plane` for a **Namespace-as-a-Service**. The operator should manage the lifecycle of each Kubernetes resource needed to run the selected service in a namespace. By dynamically creating, and managing the resources needed to run a AIChat Workspace. The resources for each AIChat Workspace should be separated, reducing interference between tenants and optimizing resource utilization.
 
-This is a pre self-assignment:
-- Write an Kubernetes Operator that manages an application.
-- Write an API that handles the CRUD for the CR built.
+Create a **LLM-as-a-Service** using Ollama to provide the API for interacting with LLMs. The interface to this will be an AIChat Workspace or direct calls to the Ollama API endpoint.
 
-The operator will create each component needed to run what an AIChat Workspace. Consisting of components defined in this [git repo](https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base) along with a couple of more objects (i.e. serviceaccounts)
+Create a Web Frontend and API endpoint for interacting with the AIChat Workspace Controller. This part of the project will use the Gin Framework and MySQL, and implement JWT authentication to secure various API endpoint(s). The project will have a number of endpoints; user registration, login, profile, and management of AIChat Workspace.
 
-The API will be a front-end to the operator. Removing the need for direct interaction with Kubernetes, providing all of the CRUD actions needed to manage an `kind: AIChatWorkspace`
+Create a Model from a modelfile that sets the `SYSTEM` prompt for the model using one-to-many [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns) `SYSTEM` prompts. The current supported patterns are:
 
-When a `kind: AIChatWorkspace` is submitted, the following objects will be created.
+- https://github.com/danielmiessler/fabric/blob/main/patterns/ai/system.md
+- https://github.com/danielmiessler/fabric/blob/main/patterns/create_summary/system.md
+- https://github.com/danielmiessler/fabric/blob/main/patterns/explain_code/system.md
+- https://github.com/danielmiessler/fabric/blob/main/patterns/translate/system.md
 
-### ResourceQuota
-Since several AIChatWorkspaces may share a cluster with a fixed number of nodes, there could be a concern that one workspace could use more than its fair share of cluster resources.
+## Solution
 
-Resource quotas will be used to address the resources usage per tenant (namespace).
+Legend: ❌ roadmap ✅ completed initial implementation
 
-### ServiceAccounts
-To ensure each workload created doesn't get attached to the `default` service account in the namespace created for the workspace, for each workload the operator will create a serviceaccont specific for the pod.
+- ✅ Controller for `AIChatWorkspace` resources
+- ✅ The `AIChatWorkspace` represents the resources needed to run [Open WebUI](https://openwebui.com/) and [Ollama](https://ollama.com/) in a namespace.
+- ✅ When a new `AIChatWorkspace` is created. Create each Kubernetes resource located [here]](https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base) as the base.
+- ✅ Handle updates to `AIChatWorkspace` and owned resources
+- ✅ Handle deletions of `AIChatWorkspace` ensuring the associated resources are also deleted.
+- ✅ Handle pulling in requested models
+- ✅ Create model from modelfile using a SYSTEM prompts from [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
+- ✅ API endpoint for register and login and calling a protected endpoint. (use: curl, postman, etc)
+- Manage the lifecycle of each application (Open WebUI and Ollama)
+- ✅ e2e testing (using Kyverno Chainsaw)
+- ❌ Helm chart (with unittest)
+- ❌ API endpoint to manage AIChat workspace. (use: curl, postman, etc)
+- ❌ Web Frontend
 
-- serviceaccount for ollama api
-- serviceaccount for openwebui
+### Components that will be dynamically created and managed:
 
-### StatefulSet (Ollama API)
-A StatefulSet will run the Ollama API along with a Kubernetes Service to route traffic to the pod.
+* ✅ Namespace - for isolation
+* ✅ ResourceQuota - optimizing resource usage
+* ✅ ServiceAccount - one per service (to ensure the workloads are not using the default)
+* ✅ Statefulset - running Ollama
+* ✅ Deployment - running Open WebUI
+* ✅ PVC to store the downloaded LLMs
+* ✅ Kubernetes Service for Ollama
+* ✅ Kubernetes Service for Open WebUI
+* ❌ Ingress object for Ollama
+* ❌ Ingress object for Open WebUI
+* ❌ NetworkPolicy allow traffic to Ollama ingress from Open WebUI only
+* ❌ NetworkPolicy allow traffic from ingress controller namespace to Open WebUI
+* ❌ KEDA HTTPScaledObject to scale the Open WebUI to zero after no requests are received based on `scaledownPeriod`.
+* ❌ KEDA Kubernetes Workload to scale based on the number of Open WebUI replicas
+* ❌ K8s ExternalService for open-webui scale-to-zero functionality
 
-- statefulset for Ollama API
-- service for Ollama API
+### Possible features
 
-### Deployment (Open WebUI)
-A Deployment will run the Open WebUI workload along with a Kubernetes Ingress and Service to route traffic to the pod.
+* Support for each `system.md` located under [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
+* Built in SRE that monitors the events of AIChat Workspace workloads and interact with LLM to identify a solution.
+* List of K8s resource in the describe of the aichatworkspace object. (pods, pvc, svc, etc)
+* add open-webui's [pipelines](https://github.com/open-webui/pipelines) workload as an option.
 
-- deployment for Open WebUI
-- service for Open WebUI
-- ingress for Open WebUI
+## Dependencies
 
-## Minimum viable product
+This project has a number of external dependencies that contribute to the **Namespace as a Service** solution
 
-The goal of this self-assignment is to show an ability to devlop solution around the stated [git repo](https://github.com/open-webui/open-webui/tree/main/kubernetes/manifest/base) , implement a pattern for testing the solution e2e, implement automation to deploy to "production".
+* ✅ Database for the AIChat Workspace API. User information
+* ✅ Ingress controller
+* ❌ CNI that supports network policies (optional)
+* ❌ Statefulset running Ollama (will be used for SRE features)
+* ❌ Vault to manage secrets for the API database
+* ✅ KEDA for scale-to-zero of AIChat Workspaces
 
-MVP = the ability to create an `kind: AIChatWorkspace` and connect to the workspace via the ingress endpoint or port-forward with `ENV=dev` set using `kustomize build config/samples/ | kubectl -n aichat-workspace-operator-system apply -f -`.
-
-##  After getting started
-
-Initial work on the self-assignment...
-
-- Set a goal to leverage some of the stated benefits of a Domain Driven, Data Oriented Architecture building this operator.
-- Identified initial Kubebuilder [workflow](notes/kubebuilder-workflow.md)
-- Implemented the [AIChatWorkspaceSpec](api/v1alpha1/aichatworkspace_types.go)
-- Implemented the [Reconcile](internal/controller/) logic
-- At time of writing this line, the MVP is achieved, submitting a CR manifest results in stated items being created. One can port-forward and download a Model and submit a prompt, which will result in a reply from the LLM.

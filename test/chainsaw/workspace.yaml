@@ -1,13 +1,12 @@
 apiVersion: apps.aichatworkspaces.io/v1alpha1
 kind: AIChatWorkspace
 metadata:
+  name: e2e
   labels:
     app.kubernetes.io/name: aichat-workspace-operator
     app.kubernetes.io/managed-by: kustomize
-  name: aichatworkspace-sample
-  namespace: aichat-workspace-operator-system
 spec:
-  workspaceName: aichat-sample
+  workspaceName: aichat-e2e
   workspaceENV: dev
   models:
     - gemma2:2b

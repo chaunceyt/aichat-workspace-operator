@@ -13,32 +13,31 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
-func (r *AIChatWorkspaceReconciler) ensureService(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, svc *corev1.Service) (*ctrl.Result, error) {
+func (r *AIChatWorkspaceReconciler) ensureResourceQuota(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, rq *corev1.ResourceQuota) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	found := &corev1.Service{}
+	found := &corev1.ResourceQuota{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
-		Name:      svc.Name,
+		Name:      rq.Name,
 		Namespace: instance.Spec.WorkspaceName,
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		logger.Info("Creating a Service", "Service.Namespace", instance.Spec.WorkspaceName, "Service.Name", svc.Name)
+		logger.Info("Creating a resource quota", "ResourceQuota.Namespace", instance.Spec.WorkspaceName, "ResourceQuota.Name", rq.Name)
 
-		controllerutil.SetControllerReference(instance, svc, r.Scheme)
-		err = r.Create(context.TODO(), svc)
+		controllerutil.SetControllerReference(instance, rq, r.Scheme)
+		err = r.Create(context.TODO(), rq)
 
 		if err != nil {
-			logger.Error(err, "Failed to create Service", "Service.Namespace", instance.Spec.WorkspaceName, "Service.Name", svc.Name)
-
+			logger.Error(err, "Failed to create resource quota", "ResourceQuota.Namespace", instance.Spec.WorkspaceName, "ResourceQuota.Name", rq.Name)
 			return &ctrl.Result{}, err
 		}
 
 		return nil, nil
 
 	} else if err != nil {
-		logger.Error(err, "Failed to get Service")
+		logger.Error(err, "Failed to get resource quota")
 
 		return &ctrl.Result{}, err
 	}
