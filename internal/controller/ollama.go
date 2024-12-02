@@ -78,7 +78,7 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		}
 	}
 
-	models, err := ollama.RunningModels(ollamaServerURI)
+	models, err := ollama.ListRunningModels(ollamaServerURI)
 	fmt.Println("Models Running: ", models)
 
 	return nil, nil

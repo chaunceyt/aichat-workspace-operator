@@ -1,0 +1,63 @@
+@startuml
+footer Kubernetes Plant-UML
+scale max 1024 width
+
+skinparam nodesep 10
+skinparam ranksep 10
+
+
+
+' Kubernetes
+!define KubernetesPuml https://raw.githubusercontent.com/dcasati/kubernetes-PlantUML/master/dist
+
+!includeurl KubernetesPuml/kubernetes_Common.puml
+!includeurl KubernetesPuml/kubernetes_Context.puml
+!includeurl KubernetesPuml/kubernetes_Simplified.puml
+
+!includeurl KubernetesPuml/OSS/KubernetesApi.puml
+!includeurl KubernetesPuml/OSS/KubernetesSvc.puml
+!includeurl KubernetesPuml/OSS/KubernetesIng.puml
+!includeurl KubernetesPuml/OSS/KubernetesPod.puml
+!includeurl KubernetesPuml/OSS/KubernetesRs.puml
+!includeurl KubernetesPuml/OSS/KubernetesDeploy.puml
+!includeurl KubernetesPuml/OSS/KubernetesSts.puml
+!includeurl KubernetesPuml/OSS/KubernetesHpa.puml
+
+
+actor "AIChatWorkspace Owner" as userAlias
+
+
+
+left to right direction
+
+' Kubernetes Components
+Cluster_Boundary(cluster, "Kubernetes Cluster") {
+    ' KubernetesApi(KubernetesApi, "Kubernetes API", "")
+    ' KubernetesDeploy(keda, "KEDA", "")
+    ' KubernetesDeploy(mysql, "MySQL database", "")
+    ' KubernetesDeploy(ingresscontroller, "Ingress Controller", "")
+    KubernetesDeploy(aichatworkspaceoperator, "AIChat Workspace Operator / API", "")
+    
+    Namespace_Boundary(aichatworkspace, "AIChat Workspace") {
+        KubernetesIng(ingress, "workspace.localtest.me", "")
+        KubernetesSvc(openwebuisvc, "open-webui-svc", "")
+        KubernetesSvc(ollamasvc, "ollama-svc", "")
+        KubernetesDeploy(openwebui, "open-webui", "")
+        KubernetesSts(ollama, "ollama-api", "")
+        KubernetesPod(openwebuipod, "open-webui", " ")
+        
+        KubernetesRs(openwebuirs,"","")
+        KubernetesPod(ollama, "ollama-api", " ")
+        KubernetesHpa(hpa, "KEDA", "")
+    }
+}
+
+Rel(userAlias,ingress, " ")
+Rel(ingress,openwebuisvc, " ")
+Rel(openwebuisvc, openwebuipod, " ")
+Rel_U(openwebuirs, openwebuipod, " ")
+Rel_U(hpa, openwebui, " ")
+Rel_U(openwebui, openwebuirs, " ")
+Rel_U(openwebuipod, ollamasvc, " ")
+Rel_U(ollamasvc, ollama, " ")
+@enduml

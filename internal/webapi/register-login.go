@@ -92,7 +92,7 @@ func login(c *gin.Context) {
 	jwtWrapper := auth.JwtWrapper{
 		SecretKey:         "aichatworkspaceauthserviceverysecretkey",
 		Issuer:            "AIChatWorkspaceAuthService",
-		ExpirationMinutes: 1,
+		ExpirationMinutes: 60,
 		ExpirationHours:   12,
 	}
 	signedToken, err := jwtWrapper.GenerateToken(user.Email)

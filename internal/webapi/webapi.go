@@ -46,6 +46,49 @@ func setupRouter() *gin.Engine {
 			protected.GET("/profile", profile)
 			// protected.POST("/workspace", aichatWorkspace)
 		}
+
+		ollama := api.Group("/ollama").Use(middlewares.Authz())
+		{
+			ollama.GET("/version", apiVersion)
+
+			// POST Generate
+			ollama.POST("/generate", generate)
+
+			// POST Chat
+			ollama.POST("/chat", chat)
+
+			// POST Pull
+			ollama.POST("/pull", pull)
+
+			// POST Push
+			ollama.POST("/push", push)
+
+			// POST Create
+			ollama.POST("/create", create)
+
+			// GET List
+			ollama.GET("/list", list)
+
+			// GET ListRunning
+			ollama.GET("/listRunning", listRunning)
+
+			// POST Copy
+			ollama.POST("/copy", copy)
+			// DELETE Delete
+
+			// POST Show
+			ollama.POST("/show", show)
+			// HEAD Heartbeat
+
+			// POST Embed
+			ollama.POST("/embed", embed)
+
+			// POST Embeddings
+			ollama.POST("/embeddings", embeddings)
+
+			// POST CreateBlob
+			ollama.POST("/createBlob", createBlob)
+		}
 	}
 
 	return r

@@ -1,0 +1,47 @@
+@startuml
+title AIChat Workspace Operator Components
+
+left to right direction
+
+component "aichat-workspace-operator" <<manager>> as aichatworkspaceoperator
+component "controller-runtime-client" <<client>> as ctrlclient
+component "AIChatWorkspace" <<controller>> as aichatworkspace
+component "AIChatWorkspace" <<Custom Resource>> as aichatworkspacecr
+component "AIChatWorkspace" <<API>> as aichatworkspaceapi
+
+' default
+component "Namespace" <<Namespace>> as namespace
+component "ResourceQuota" <<ResourceQuota>> as resourcequota
+
+' Ollama workload
+component "Ollama" <<StatefulSet>> as ollamasts
+component "OllamaService" <<Service>> as ollamasvc
+component "OllamaServiceAccount" <<ServiceAccount>> as ollamasa
+
+' Open WebUI workload
+component "OpenWebUI" <<Deployment>> as openwebuideploy
+component "OpenWebUIService" <<Service>> as openwebuisvc
+component "OpenWebUIPVC" <<PVC>> as openwebuipvc
+component "OpenWebUIServiceAccount" <<ServiceAccount>> as openwebuisa
+
+
+component "AIChatWorkspace" <<CRD>> as aichatworkspacecrd
+
+aichatworkspaceoperator -right-> ctrlclient
+aichatworkspaceoperator -left-> aichatworkspace
+
+aichatworkspace --> aichatworkspacecr
+aichatworkspace -left-> aichatworkspaceapi
+aichatworkspaceapi -left-> aichatworkspacecrd
+
+aichatworkspacecr --> namespace
+aichatworkspacecr --> resourcequota
+aichatworkspacecr --> ollamasts
+aichatworkspacecr --> ollamasa
+aichatworkspacecr --> ollamasvc
+
+aichatworkspacecr --> openwebuideploy
+aichatworkspacecr --> openwebuisvc
+aichatworkspacecr --> openwebuisa
+aichatworkspacecr --> openwebuipvc
+@enduml

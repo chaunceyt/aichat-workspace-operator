@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.10.0
+	github.com/kedacore/http-add-on v0.8.0
 	github.com/ollama/ollama v0.4.5
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.34.2

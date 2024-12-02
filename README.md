@@ -4,7 +4,7 @@ Create AIChat Workspaces powered by [Open WebUI](https://openwebui.com/) and [Ol
 
 ## Objectives
 
-Create a Kubernetes Operator that creates the `control-plane` for a **Namespace-as-a-Service**. The operator should manage the lifecycle of each Kubernetes resource needed to run the selected service in a namespace. By dynamically creating, and managing the resources needed to run a AIChat Workspace. The resources for each AIChat Workspace should be separated, reducing interference between tenants and optimizing resource utilization.
+Create a Kubernetes Operator that creates the `control-plane` for a **Namespace-as-a-Service**. The operator should manage the lifecycle of each Kubernetes resource needed to run the selected service in a namespace. By dynamically creating, and managing the resources needed to run a AIChat Workspace. The resources for each AIChat Workspace should be separated and scaled-to-zeros when there has been no requests, reducing interference between tenants and optimizing resource utilization.
 
 Create a **LLM-as-a-Service** using Ollama to provide the API for interacting with LLMs. The interface to this will be an AIChat Workspace or direct calls to the Ollama API endpoint.
 
@@ -17,7 +17,28 @@ Create a Model from a modelfile that sets the `SYSTEM` prompt for the model usin
 - https://github.com/danielmiessler/fabric/blob/main/patterns/explain_code/system.md
 - https://github.com/danielmiessler/fabric/blob/main/patterns/translate/system.md
 
-## Solution
+
+## Design and Implementation
+
+### Design
+
+
+The purpose of this design is to support running AIChat Workspaces within a Namespace as a Service offering.
+
+
+![image](diagrams/aichatworkspace-operator-components.png)
+
+Personas that will interact with the environment. Platform Engineers, and AIChatWorkspace owners
+
+![image](diagrams/simple-persona-workflow.png)
+
+## Implementation
+
+- Used go version 1.23
+- Used Kubebuilder to generate most of the code.
+- Used Kind to create the K8s cluster running v1.31.0.
+- KEDA's `HTTPScaledObject` is being used to address the **scale-to-zero** requirement.
+- Defaulted to xSmall LLMs i.e. `gemma2:2b`, `llama3.2:1b`, and `qwen2.5-coder:1.5b` in custom resource manifests. 
 
 Legend: ❌ roadmap ✅ completed initial implementation
 
@@ -31,6 +52,7 @@ Legend: ❌ roadmap ✅ completed initial implementation
 - ✅ API endpoint for register and login and calling a protected endpoint. (use: curl, postman, etc)
 - Manage the lifecycle of each application (Open WebUI and Ollama)
 - ✅ e2e testing (using Kyverno Chainsaw)
+- ❌ Scale-to-Zero after no request are received for a period of time. (scale up on new requests)
 - ❌ Helm chart (with unittest)
 - ❌ API endpoint to manage AIChat workspace. (use: curl, postman, etc)
 - ❌ Web Frontend
@@ -53,14 +75,7 @@ Legend: ❌ roadmap ✅ completed initial implementation
 * ❌ KEDA Kubernetes Workload to scale based on the number of Open WebUI replicas
 * ❌ K8s ExternalService for open-webui scale-to-zero functionality
 
-### Possible features
-
-* Support for each `system.md` located under [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
-* Built in SRE that monitors the events of AIChat Workspace workloads and interact with LLM to identify a solution.
-* List of K8s resource in the describe of the aichatworkspace object. (pods, pvc, svc, etc)
-* add open-webui's [pipelines](https://github.com/open-webui/pipelines) workload as an option.
-
-## Dependencies
+### Dependencies
 
 This project has a number of external dependencies that contribute to the **Namespace as a Service** solution
 
@@ -71,3 +86,39 @@ This project has a number of external dependencies that contribute to the **Name
 * ❌ Vault to manage secrets for the API database
 * ✅ KEDA for scale-to-zero of AIChat Workspaces
 
+### Features before considered feature complete
+
+* ❌ Support for each `system.md` located under [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
+* ❌ Built in SRE that monitors the events of AIChat Workspace workloads and interact with LLM to identify a solution.
+* ❌ List of resource in the describe of the aichatworkspace object. (pods, pvc, svc, models running, etc)
+* ❌ add open-webui's [pipelines](https://github.com/open-webui/pipelines) workload as an option.
+
+# Getting Started
+
+### Prerequisites
+- go version v1.23.0+
+- kubectl version v1.31.0+.
+- A Kubernetes cluster. (Developed/Tested using Kind v1.31.0+)
+
+
+### To Test this project
+
+* To run unit tests.
+
+```sh
+make test
+```
+
+* To run chainsaw e2e tests.
+
+```sh
+make chainsaw
+```
+
+### Run the project
+
+Running the script below will create install everything needed to run this locally using a kind create cluster.
+
+```sh
+./from-scratch.sh
+```

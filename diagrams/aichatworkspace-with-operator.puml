@@ -1,0 +1,95 @@
+@startuml
+footer Kubernetes Plant-UML
+scale max 1024 width
+
+skinparam nodesep 10
+skinparam ranksep 10
+
+
+
+' Kubernetes
+!define KubernetesPuml https://raw.githubusercontent.com/dcasati/kubernetes-PlantUML/master/dist
+
+!includeurl KubernetesPuml/kubernetes_Common.puml
+!includeurl KubernetesPuml/kubernetes_Context.puml
+!includeurl KubernetesPuml/kubernetes_Simplified.puml
+
+!includeurl KubernetesPuml/OSS/KubernetesApi.puml
+!includeurl KubernetesPuml/OSS/KubernetesSvc.puml
+!includeurl KubernetesPuml/OSS/KubernetesIng.puml
+!includeurl KubernetesPuml/OSS/KubernetesPod.puml
+!includeurl KubernetesPuml/OSS/KubernetesRs.puml
+!includeurl KubernetesPuml/OSS/KubernetesDeploy.puml
+!includeurl KubernetesPuml/OSS/KubernetesHpa.puml
+
+actor "Platform Engineer" as engineerAlias
+actor "AIChatWorkspace Owner" as userAlias
+rectangle "Identity Provider" as ID
+rectangle "Role Based Access Control (RBAC)" as RBAC
+
+
+left to right direction
+
+' Kubernetes Components
+Cluster_Boundary(cluster, "Kubernetes Cluster") {
+    KubernetesApi(KubernetesApi, "Kubernetes API", "")
+
+    Namespace_Boundary(aichatworkspacecontroller, "AIChat Workspace Operator") {
+        KubernetesPod(operator, "operator/API", "")
+        KubernetesSvc(mysqlsvc, "mysql-svc", "")
+        KubernetesPod(mysql, "mysqlDB", "")
+        KubernetesSvc(apiollamasvc, "ollama-svc", "")
+        KubernetesPod(apiollama, "ollama", "")
+    }
+    
+    Namespace_Boundary(aichatworkspace, "AIChat Workspace") {
+        KubernetesIng(ingress, "team-a-aichat.openwebui.localtest.me", "")
+        KubernetesSvc(openwebuisvc, "open-webui-svc", "")
+        KubernetesSvc(ollamasvc, "ollama-svc", "")
+        KubernetesPod(openwebui, "open-webui", "")
+        KubernetesPod(ollama, "ollama-api", "")
+        note bottom of aichatworkspace
+            K8s Objects created 
+            
+            Namespace - for isolation
+            ResourceQuota - optimizing resource usage
+            ServiceAccount - one per pod
+            StatefulSet - Ollama
+            Deployment - Open WebUI
+            Service - Ollama
+            Service - Open WebUI
+            Ingress - Open WebUI
+            PVC - Ollama
+        end note
+    }
+}
+
+' AIChatWorkspace created from Operator/API
+Rel(engineerAlias, KubernetesApi, "1: pass credentials")
+Rel(KubernetesApi, ID, "2: Verify Identity")
+Rel(ID, KubernetesApi, " ")
+Rel(KubernetesApi, RBAC, "3: Check Authorization")
+Rel(RBAC, KubernetesApi, "")
+Rel(KubernetesApi, engineerAlias, "4: Allow/Deny")
+Rel(engineerAlias,operator, "5: Request AIChat Workspace")
+Rel(operator,mysqlsvc, " ")
+Rel(mysqlsvc, mysql, " ")
+Rel(operator,apiollamasvc," ")
+Rel(apiollamasvc, apiollama, " ")
+Rel(apiollama, apiollamasvc, " ")
+Rel(apiollamasvc, operator, " ")
+Rel(mysql, mysqlsvc, " ")
+Rel(mysqlsvc, operator, " ")
+
+' Operator/API namespace
+Rel(userAlias,ingress, " ")
+Rel(ingress,openwebuisvc, " ")
+Rel(openwebuisvc, openwebui, " ")
+Rel(openwebui, ollamasvc, " ")
+Rel(ollamasvc, ollama, " ")
+Rel(ollama, ollamasvc, " ")
+Rel(ollamasvc, openwebui, " ")
+Rel(openwebui, openwebuisvc, " ")
+Rel(openwebuisvc, ingress, " ")
+Rel(operator, aichatworkspace, "6: Create AIChat Workspace")
+@enduml

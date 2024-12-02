@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/database"
 
 	"golang.org/x/crypto/bcrypt"
@@ -11,13 +9,11 @@ import (
 
 type User struct {
 	gorm.Model
-	ID            int       `gorm:"primaryKey"`
-	Name          string    `json:"name" binding:"required"`
-	Email         string    `json:"email" binding:"required" gorm:"unique"`
-	Password      string    `json:"password" binding:"required"`
-	CreatedAt     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	WorkspaceName string    `json:"workspaceName,omitempty"`
+	ID            int    `gorm:"primaryKey"`
+	Name          string `json:"name" binding:"required"`
+	Email         string `json:"email" binding:"required" gorm:"unique"`
+	Password      string `json:"password" binding:"required"`
+	WorkspaceName string `json:"workspaceName,omitempty"`
 }
 
 func (user *User) CreateUserRecord() error {
