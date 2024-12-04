@@ -18,11 +18,14 @@ package main
 
 import (
 	"crypto/tls"
+	"expvar"
 	"flag"
 	"os"
 
+	"github.com/arl/statsviz"
+
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -104,7 +107,16 @@ func main() {
 	// collect a heap go tool pprof http://localhost:6060/debug/pprof/heap
 	// collect goroutine profile go tool pprof http://localhost:6060/debug/pprof/goroutine
 	go func() {
-		http.ListenAndServe("localhost:6060", nil)
+		mux := http.NewServeMux()
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.Handle("/debug/vars/", expvar.Handler())
+
+		statsviz.Register(mux)
+		http.ListenAndServe("localhost:6060", mux)
 	}()
 
 	// StartWebAPI runs a Web/API service that interacts with the AIChat Workspace Operator

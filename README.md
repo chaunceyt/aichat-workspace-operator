@@ -34,9 +34,9 @@ Personas that will interact with the environment. Platform Engineers, and AIChat
 
 ## Implementation
 
-- Used go version 1.23
-- Used Kubebuilder to generate most of the code.
-- Used Kind to create the K8s cluster running v1.31.0.
+- Used go version `1.23`
+- Used Kubebuilder `v4.3.1` to generate most of the code.
+- Used Kind to create the K8s cluster running `v1.31.0`.
 - KEDA's `HTTPScaledObject` is being used to address the **scale-to-zero** requirement.
 - Defaulted to xSmall LLMs i.e. `gemma2:2b`, `llama3.2:1b`, and `qwen2.5-coder:1.5b` in custom resource manifests. 
 
