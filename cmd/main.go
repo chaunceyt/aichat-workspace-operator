@@ -43,7 +43,6 @@ import (
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/controller"
-	"github.com/chaunceyt/aichat-workspace-operator/internal/webapi"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -117,12 +116,6 @@ func main() {
 
 		statsviz.Register(mux)
 		http.ListenAndServe("localhost:6060", mux)
-	}()
-
-	// StartWebAPI runs a Web/API service that interacts with the AIChat Workspace Operator
-	// Requires a mysql backend.
-	go func() {
-		webapi.StartWebAPI()
 	}()
 
 	webhookServer := webhook.NewServer(webhook.Options{

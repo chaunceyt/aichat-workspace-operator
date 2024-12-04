@@ -24,6 +24,10 @@ func (step *InitAIChatWorkspaceStep) execute(instance *AIChatWorkspaceInstance) 
 
 	instance.logger.Info("ending InitStep")
 
+	if step.next == nil {
+		return instance.r.finishReconcile(nil, false)
+	}
+
 	return step.next.execute(instance)
 
 }

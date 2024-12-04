@@ -61,10 +61,11 @@ func (step *CreateAIChatWorkspaceStep) execute(instance *AIChatWorkspaceInstance
 			err = fmt.Errorf("unable to patch status after progressing: %w", err)
 			return instance.r.finishReconcile(err, false)
 		}
-		instance.r.Recorder.Event(instance.aichatWorkspaceConfig, "Normal", "Created",
-			fmt.Sprintf("aichatWorkspace %s was created in namespace %s",
-				instance.aichatWorkspaceConfig.Name,
-				instance.aichatWorkspaceConfig.Namespace))
+
+		// instance.r.Recorder.Event(instance.aichatWorkspaceConfig, "Normal", "Created",
+		// 	fmt.Sprintf("aichatWorkspace %s was created in namespace %s",
+		// 		instance.aichatWorkspaceConfig.Name,
+		// 		instance.aichatWorkspaceConfig.Namespace))
 
 	}
 
