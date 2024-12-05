@@ -118,13 +118,16 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 	containerImage := fmt.Sprintf("%s:%s", ollamaContainerImageName, ollamaContainerImageTag)
 	saName := fmt.Sprintf("%s-ollama", namespace)
 
+	serviceName := fmt.Sprintf("%s-%s", namespace, "ollama")
+
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Selector: &metav1.LabelSelector{MatchLabels: appLabels},
+			Selector:    &metav1.LabelSelector{MatchLabels: appLabels},
+			ServiceName: serviceName,
 			VolumeClaimTemplates: []v1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{

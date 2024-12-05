@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,8 +45,9 @@ const (
 // AIChatWorkspaceReconciler reconciles a AIChatWorkspace object
 type AIChatWorkspaceReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	kubeconfig *restclient.Config
+	Scheme     *runtime.Scheme
+	Recorder   record.EventRecorder
 }
 
 type AIChatWorkspaceInstance struct {
@@ -62,7 +64,7 @@ type AIChatWorkspace interface {
 }
 
 var (
-	aichatWorkspaceControllerLog = ctrl.Log.WithName("k8sgpt-controller")
+	aichatWorkspaceControllerLog = ctrl.Log.WithName("aichatworkspace-controller")
 )
 
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces,verbs=get;list;watch;create;update;patch;delete
@@ -72,6 +74,8 @@ var (
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
 // +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts;resourcequotas,verbs=*
 // +kubebuilder:rbac:groups="",resources=events,verbs=create
+// +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;watch;list
+// +kubebuilder:rbac:groups="http.keda.sh",resources=httpscaledobjects,verbs=*
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -170,7 +174,7 @@ func workloadName(cr *appsv1alpha1.AIChatWorkspace, workloadType string) string 
 }
 
 // deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.
-// deleting the namespace ensure each of the objects created was deleted.
+// deleting the namespace ensures each of the objects created are deleted.
 //   - resourcequota
 //   - serviceaccount for ollama api
 //   - serviceaccount for openwebui

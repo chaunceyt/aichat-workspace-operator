@@ -91,13 +91,13 @@ func NewService(namespace string, name string, port int32, appLabels map[string]
 
 // need to make scale-to-zero work.
 // the ingress for open-webui and ollama will point to these
-func NewExternalService(namespace string, name, workload string, port int32, appLabels map[string]string) *corev1.Service {
+func NewExternalService(namespace string, name, workload string, appLabels map[string]string) *corev1.Service {
 	// TODO: move to const package.
 	kedaProxy := "keda-add-ons-http-interceptor-proxy.keda"
 	proxyName := fmt.Sprintf("%s-%s", namespace, workload)
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(proxyName, "-proxy"),
+			Name:      getName(proxyName, "proxy"),
 			Namespace: namespace,
 			Labels:    appLabels,
 		},
@@ -129,8 +129,13 @@ func NewResourceQuota(namespace string, name string, appLabels map[string]string
 	}
 }
 
-func NewIngress(workspacename, ns, backendName, workload string, backendPort int) *networkingv1.Ingress {
+func NewIngress(workspacename, workload, backendName string, backendPort int32) *networkingv1.Ingress {
+	pathType := networkingv1.PathTypePrefix
 	return &networkingv1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getName(workspacename, workload),
 			Namespace: workspacename,
@@ -147,12 +152,13 @@ func NewIngress(workspacename, ns, backendName, workload string, backendPort int
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
 								{
-									Path: "/",
+									Path:     "/",
+									PathType: &pathType,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: getName(workspacename, workload),
+											Name: backendName,
 											Port: networkingv1.ServiceBackendPort{
-												Number: int32(80),
+												Number: backendPort,
 											},
 										},
 									},
@@ -166,20 +172,20 @@ func NewIngress(workspacename, ns, backendName, workload string, backendPort int
 	}
 }
 
-func NewHttpSo(name, namespace, kind, workload string, port int32, hosts []string) *kedahttpv1alpha1.HTTPScaledObject {
+func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string) *kedahttpv1alpha1.HTTPScaledObject {
 	return &kedahttpv1alpha1.HTTPScaledObject{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(name, workload),
-			Namespace: namespace,
+			Name:      getName(workspacename, workload),
+			Namespace: workspacename,
 		},
 		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{
 			Hosts:        hosts,
 			PathPrefixes: []string{"/"},
 			ScaleTargetRef: kedahttpv1alpha1.ScaleTargetRef{
-				Name:       getName(name, workload),
+				Name:       getName(workspacename, workload),
 				Kind:       kind,
 				APIVersion: "apps/v1",
-				Service:    getName(name, workload),
+				Service:    getName(workspacename, workload),
 				Port:       int32(port),
 			},
 			Replicas: &kedahttpv1alpha1.ReplicaStruct{

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy
+spec:
+  selector:
+    app: envoy
+  ports:
+    - protocol: TCP
+      port: 80            # Application port, exposed as port 80 externally
+      targetPort: 8080      # Envoy listening on port 8080
+      name: http
+    - protocol: TCP
+      port: 9901           # Admin port, exposed as port 9901 for metrics
+      targetPort: 9901      # Envoy's admin interface on port 9901
+      name: admin
+  type: ClusterIP          # Service is only accessible within the cluster

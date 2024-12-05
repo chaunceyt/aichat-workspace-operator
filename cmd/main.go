@@ -41,6 +41,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
@@ -53,6 +55,9 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
+	// KEDA
+	utilruntime.Must(kedahttpv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(appsv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme

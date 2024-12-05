@@ -11,7 +11,3 @@ spec:
   workspaceENV: dev
   models:
     - gemma2:2b
-    - llama3.2:1b
-    - qwen2.5-coder:1.5b
-    - smollm2:latest
-    - codegemma:2b

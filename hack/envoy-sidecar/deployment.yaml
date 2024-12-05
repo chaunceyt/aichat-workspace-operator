@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: envoy
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.4.1
+          ports:
+            - containerPort: 11434
+        - name: envoy
+          image: envoyproxy/envoy:v1.20.0
+          ports:
+            # Expose Envoy listener
+            - containerPort: 8080 
+            # Expose Envoy admin
+            - containerPort: 9901
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+          args:
+            - "--config-path"
+            - "/etc/envoy/envoy.yaml" 
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: envoy-config
