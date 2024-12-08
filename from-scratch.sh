@@ -28,6 +28,3 @@ IMG=aichatworkspace:v1 make deploy
 kubectl rollout restart deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
 kubectl rollout status deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
 kubectl get po -n aichat-workspace-operator-system
-
-sleep 1
-kustomize build config/samples/ | kubectl -n aichat-workspace-operator-system apply -f -

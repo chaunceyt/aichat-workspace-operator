@@ -1,7 +1,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: team-a-aichat-openwebui-proxy
+  name: openwebui-http-interceptor-proxy
+  namespace: scale-to-zero
 spec:
   type: ExternalName
   externalName: keda-add-ons-http-interceptor-proxy.keda

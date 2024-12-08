@@ -18,11 +18,14 @@ package main
 
 import (
 	"crypto/tls"
+	"expvar"
 	"flag"
 	"os"
 
+	"github.com/arl/statsviz"
+
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -38,9 +41,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/controller"
-	"github.com/chaunceyt/aichat-workspace-operator/internal/webapi"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -51,6 +55,9 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
+	// KEDA
+	utilruntime.Must(kedahttpv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(appsv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
@@ -104,13 +111,16 @@ func main() {
 	// collect a heap go tool pprof http://localhost:6060/debug/pprof/heap
 	// collect goroutine profile go tool pprof http://localhost:6060/debug/pprof/goroutine
 	go func() {
-		http.ListenAndServe("localhost:6060", nil)
-	}()
+		mux := http.NewServeMux()
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.Handle("/debug/vars/", expvar.Handler())
 
-	// StartWebAPI runs a Web/API service that interacts with the AIChat Workspace Operator
-	// Requires a mysql backend.
-	go func() {
-		webapi.StartWebAPI()
+		statsviz.Register(mux)
+		http.ListenAndServe("localhost:6060", mux)
 	}()
 
 	webhookServer := webhook.NewServer(webhook.Options{

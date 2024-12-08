@@ -11,13 +11,14 @@ The operator will
 Each pod will have securitycontext defined making the workload secure
 Network policies to prevent traffic outside the namespace from interacting with endpoint
 
-Database backend:
+Database backend for AIChat workspaces:
 - default sqlite3
+- mysql
 - postgres (should this be cnpg or custom)
 
-Focus on small llms
+Focus on xsmall llms
 sLLMs
-qwen2.5-coder:3b
-smollm2
-phi3.5
-codegemma:2b
+- qwen2.5-coder:3b
+- smollm2
+- phi3.5
+- codegemma:2b

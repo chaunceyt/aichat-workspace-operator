@@ -2,7 +2,6 @@ kind: HTTPScaledObject
 apiVersion: http.keda.sh/v1alpha1
 metadata:
     namespace: team-a-aichat
-    name: team-a-aichat-ollama
 spec:
     hosts:
     - team-a-aichat.ollama.localtest.me
@@ -18,7 +17,7 @@ spec:
     replicas:
         min: 0
         max: 1
-    scaledownPeriod: 3600
+    scaledownPeriod: 600
     scalingMetric:
         requestRate:
             targetValue: 20

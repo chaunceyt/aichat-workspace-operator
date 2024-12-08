@@ -1,0 +1,15 @@
+resources:
+  # Install Open WebUI and Ollama
+  - namespace.yaml
+  - ollama-service.yaml
+  - ollama-statefulset.yaml
+  - webui-deployment.yaml
+  - webui-service.yaml
+  - webui-pvc.yaml
+
+  # Create KEDA config requirements
+  - keda-httpscaledobject-openwebui.yaml
+  - externalservice-openwebui.yaml
+
+  # Create ingress pointing to externalservice
+  - webui-ingress-scale-to-zero.yaml

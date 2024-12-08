@@ -11,4 +11,3 @@ spec:
   workspaceENV: dev
   models:
     - gemma2:2b
-    - phi3.5:latest

@@ -44,31 +44,37 @@ make install
 
 ## Running locally
 
-In another terminal, allowing the logs to stream.
+Run `./from-scratch.sh` and in another terminal monitor the logs of the operator.
+
+## Commands Excuted during development
+
+### After running from-scratch.sh
+
+Setup initial AIChat Workspace
 
 ```
-make run
+kustomize build config/samples/ | kubectl -n aichat-workspace-operator-system apply -f -
+kubectl rollout status deploy team-a-aichat-openwebui -n team-a-aichat
+kubectl rollout status sts team-a-aichat-ollama -n team-a-aichat
 ```
 
-## Create CR
+### scale-to-zero setup
 
 ```
-kubectl create ns a-team
-kustomize build config/samples/ | kubectl -n a-team apply -f -
+kubectl apply -f hack/externalservice-openwebui.yaml -n team-a-aichat
+kubectl apply -f hack/externalservice-ollama.yaml -n team-a-aichat
+kubectl apply -f hack/open-webui-ingress.yaml -n team-a-aichat
+kubectl apply -f hack/ollama-ingress.yaml -n team-a-aichat
+kubectl apply -f hack/keda-httpscaledobject-openwebui.yaml -n team-a-aichat
+kubectl apply -f hack/keda-k8s-workload-scaledobject.yaml -n team-a-aichat
 ```
 
-## Rebuild environment
+### rebuild container image
 
 ```
-#!/bin/bash
-
-kind delete cluster
-sleep 1
-kind create cluster
-sleep 1
-make generate
-make manifests
-make install
 IMG=aichatworkspace:v1 make docker-build
 kind load docker-image aichatworkspace:v1
+kubectl rollout restart deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
+kubectl rollout status deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
+kubectl get po -n aichat-workspace-operator-system
 ```

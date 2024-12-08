@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -86,5 +87,24 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 		return result, err
 	}
 
+	// ensureIngress - creating the Ingress used for Open WebUI service
+	// proxyName := fmt.Sprintf("%s", "openwebui")
+	openwebBackend := getName(aichat.Spec.WorkspaceName, "openwebui")
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, "openwebui", openwebBackend, openwebuiContainerPort))
+	if result != nil {
+		return result, err
+	}
+
+	// ensureIngress - creating the Ingress used for Ollama service
+	ollamaBackend := getName(aichat.Spec.WorkspaceName, "ollama")
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, "ollama", ollamaBackend, ollamaContainerPort))
+	if result != nil {
+		return result, err
+	}
 	return result, nil
+}
+
+func getName(workspace, workload string) string {
+	name := fmt.Sprintf("%s-%s", workspace, workload)
+	return name
 }

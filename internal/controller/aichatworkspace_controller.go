@@ -23,31 +23,49 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
+	"github.com/go-logr/logr"
 )
 
 const (
-	ReconcileErrorInterval   = 10 * time.Second
-	ReconcileSuccessInterval = 30 * time.Second
-	reconcileStarted         = "staring reconcile"
+	ReconcileErrorInterval       = 10 * time.Second
+	ReconcileSuccessInterval     = 30 * time.Second
+	reconcileStarted             = "staring reconcile"
+	aichatWorkspaceFinalizerName = "core.aichatworkspace.io/finalizer"
 )
 
 // AIChatWorkspaceReconciler reconciles a AIChatWorkspace object
 type AIChatWorkspaceReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	kubeconfig *restclient.Config
+	Scheme     *runtime.Scheme
+	Recorder   record.EventRecorder
 }
+
+type AIChatWorkspaceInstance struct {
+	r                     *AIChatWorkspaceReconciler
+	req                   ctrl.Request
+	ctx                   context.Context
+	aichatWorkspaceConfig *appsv1alpha1.AIChatWorkspace
+	logger                logr.Logger
+}
+
+type AIChatWorkspace interface {
+	execute(*AIChatWorkspaceInstance) (ctrl.Result, error)
+	setNext(AIChatWorkspace)
+}
+
+var (
+	aichatWorkspaceControllerLog = ctrl.Log.WithName("aichatworkspace-controller")
+)
 
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/status,verbs=get;update;patch
@@ -56,6 +74,8 @@ type AIChatWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
 // +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts;resourcequotas,verbs=*
 // +kubebuilder:rbac:groups="",resources=events,verbs=create
+// +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;watch;list
+// +kubebuilder:rbac:groups="http.keda.sh",resources=httpscaledobjects,verbs=*
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -69,114 +89,28 @@ type AIChatWorkspaceReconciler struct {
 func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	now := time.Now()
 	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name).WithValues("starting reconcile of aichatworkspace", time.Since(now))
-	var err error
 
 	logger.Info("starting reconciling aichatworkspace")
 
-	aichat := &appsv1alpha1.AIChatWorkspace{}
-	err = r.Get(context.TODO(), req.NamespacedName, aichat)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+	instance := AIChatWorkspaceInstance{
+		r:      r,
+		req:    req,
+		ctx:    ctx,
+		logger: aichatWorkspaceControllerLog,
 	}
 
-	aichatWorkspaceFinalizerName := "core.aichatworkspace.io/finalizer"
+	initStep := InitAIChatWorkspaceStep{}
+	finalizerStep := FinalizerStep{}
+	createStep := CreateAIChatWorkspaceStep{}
+	updateStep := UpdateAIChatWorkspaceStep{}
+	deleteStep := DeleteAIChatWorkspaceStep{}
 
-	isCreated := aichat.Status.IsCreated
-	pendingDeletion := aichat.ObjectMeta.DeletionTimestamp != nil
-	hasFinalizer := controllerutil.ContainsFinalizer(aichat, aichatWorkspaceFinalizerName)
+	initStep.setNext(&finalizerStep)
+	finalizerStep.setNext(&createStep)
+	createStep.setNext(&updateStep)
+	updateStep.setNext(&deleteStep)
 
-	switch {
-	case !hasFinalizer && !pendingDeletion:
-		controllerutil.AddFinalizer(aichat, aichatWorkspaceFinalizerName)
-		if err = r.Update(ctx, aichat); err != nil {
-			return r.finishReconcile(err, false)
-		}
-	case !isCreated && !pendingDeletion:
-		logger.Info("reconciling aichat", "aichat", aichat, "action", "create")
-
-		// handleReconcile - creates the aichatworkspace.
-		var result *ctrl.Result
-		result, err = r.handleReconcile(ctx, result, aichat)
-		if result != nil {
-			return r.finishReconcile(err, true)
-		}
-
-		aichat.Status.IsCreated = true
-
-		if err = r.Status().Update(ctx, aichat); err != nil {
-			apimeta.SetStatusCondition(&aichat.Status.Conditions, metav1.Condition{
-				Status:             metav1.ConditionFalse,
-				Reason:             appsv1alpha1.ReconciliationFailedReason,
-				Message:            err.Error(),
-				Type:               appsv1alpha1.ConditionTypeReady,
-				ObservedGeneration: aichat.GetGeneration(),
-			})
-			if err = r.patchStatus(ctx, aichat); err != nil {
-				err = fmt.Errorf("unable to patch status after progressing: %w", err)
-				return r.finishReconcile(err, true)
-			}
-		}
-		apimeta.SetStatusCondition(&aichat.Status.Conditions, metav1.Condition{
-			Status:             metav1.ConditionFalse,
-			Reason:             appsv1alpha1.ProgressingReason,
-			Message:            "Reconciliation progressing",
-			Type:               appsv1alpha1.ConditionTypeReady,
-			ObservedGeneration: aichat.GetGeneration(),
-		})
-		apimeta.SetStatusCondition(&aichat.Status.Conditions, metav1.Condition{
-			Status:             metav1.ConditionTrue,
-			Reason:             appsv1alpha1.ReconciliationSucceededReason,
-			Message:            "AIChatWorkspace reconciled",
-			Type:               appsv1alpha1.ConditionTypeReady,
-			ObservedGeneration: aichat.GetGeneration(),
-		})
-
-		if err = r.patchStatus(ctx, aichat); err != nil {
-			err = fmt.Errorf("unable to patch status after progressing: %w", err)
-			return r.finishReconcile(err, true)
-		}
-		r.Recorder.Event(aichat, "Normal", "Created",
-			fmt.Sprintf("aichatWorkspace %s was created in namespace %s",
-				aichat.Name,
-				aichat.Namespace))
-	case !isCreated && pendingDeletion:
-		logger.Info("reconciling aichat", "aichat", aichat, "action", "no-op")
-	case isCreated && !pendingDeletion:
-		logger.Info("reconciling aichat", "aichat", aichat, "action", "update")
-
-		// handleReconcile - reconciles changes to the aichatworkspace.
-		var result *ctrl.Result
-		result, err = r.handleReconcile(ctx, result, aichat)
-		if result != nil {
-			return r.finishReconcile(err, true)
-		}
-
-	case isCreated && pendingDeletion:
-		logger.Info("reconciling aichat", "aichat", aichat, "action", "delete")
-		if controllerutil.ContainsFinalizer(aichat, aichatWorkspaceFinalizerName) {
-			if err = r.deleteAIChatWorkspace(ctx, aichat); err != nil {
-				return ctrl.Result{}, err
-			}
-			r.Recorder.Event(aichat, "Warning", "Deleting",
-				fmt.Sprintf("aichatWorkspace %s is being deleted from the namespace %s",
-					aichat.Name,
-					aichat.Namespace))
-			controllerutil.RemoveFinalizer(aichat, aichatWorkspaceFinalizerName)
-			if err = r.Update(ctx, aichat); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	// TODO
-	// Get list of pods and include to status
-	// Get list of running models and include in status
-	// Get df-h of PVC for ollama and include in status
-
-	return r.finishReconcile(err, false)
+	return initStep.execute(&instance)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -240,7 +174,7 @@ func workloadName(cr *appsv1alpha1.AIChatWorkspace, workloadType string) string 
 }
 
 // deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.
-// deleting the namespace ensure each of the objects created was deleted.
+// deleting the namespace ensures each of the objects created are deleted.
 //   - resourcequota
 //   - serviceaccount for ollama api
 //   - serviceaccount for openwebui

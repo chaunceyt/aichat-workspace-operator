@@ -55,6 +55,20 @@ rules:
   - patch
   - update
 - apiGroups:
+  - http.keda.sh
+  resources:
+  - httpscaledobjects
+  verbs:
+  - '*'
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - networking.k8s.io
   resources:
   - ingresses

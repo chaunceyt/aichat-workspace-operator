@@ -1,19 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: open-webui-ingress
+  name: ollama-ingress
   labels:
     app.kubernetes.io/instance: open-webui
-    app.kubernetes.io/component: open-webui
+    app.kubernetes.io/component: ollama
 spec:
   rules:
-  - host: team-a-aichat.openwebui.localtest.me
+  - host: aichatworkspace.api.localtest.me
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: team-a-aichat-openwebui
+            name: aichatworkspace-api
             port:
               number: 8080
