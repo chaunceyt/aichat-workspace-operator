@@ -2,6 +2,14 @@
 
 This sidecar will be used to provide `basic-auth`, `stats`, and additional `prometheus` stats for the ollama API endpoint.
 
+Alt solution: use basic auth for the Ingress.
+
+```
+# echo  "ollama:$apr1$i9ygHJeq$DtM1NF4LbsHMeo3WBMQKV0" > auth
+kubectl create secret generic basic-auth --from-file=auth -n envoy-test
+Domain: http://ollama-api.localtest.me
+```
+
 ## Current State
 
 - Getting a `upstream timeout` when make calls to `/api/generate|chat`. Yet `/api/pull` works when using port-forward
