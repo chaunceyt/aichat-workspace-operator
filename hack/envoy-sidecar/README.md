@@ -8,7 +8,7 @@ This sidecar will be used to provide `basic-auth`, `stats`, and additional `prom
 
 Pull in a model
 ```
-curl --user ollama:ollama http://127.0.0.1:8089/api/show -d '{
+curl --user ollama:ollama http://127.0.0.1:8089/api/pull -d '{
   "model": "gemma2:2b"
 }'
 ```
