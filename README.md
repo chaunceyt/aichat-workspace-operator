@@ -10,14 +10,7 @@ Create a **LLM as a Service** using Ollama to provide the API for interacting wi
 
 Create a Kubernetes Operator that creates the `control-plane` for the **LLM as a Service**. The operator should manage the lifecycle of each Kubernetes resource needed to run the selected service in a namespace. By dynamically creating, and managing the resources needed to run the AIChat Workspace. The resources for each AIChat Workspace should be separated, reducing interference between tenants and optimizing resource utilization.
 
-Create a Web Frontend and API endpoint for interacting with the AIChat Workspace Controller. This part of the project will use the Gin Framework and MySQL, and implement JWT authentication to secure various API endpoint(s). The project will have a number of endpoints; user registration, login, profile, and management of AIChat Workspace.
-
-Create a Model from a modelfile that sets the `SYSTEM` prompt for the model using one-to-many [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns) `SYSTEM` prompts. The current supported patterns are:
-
-* https://github.com/danielmiessler/fabric/blob/main/patterns/ai/system.md
-* https://github.com/danielmiessler/fabric/blob/main/patterns/create_summary/system.md
-* https://github.com/danielmiessler/fabric/blob/main/patterns/explain_code/system.md
-* https://github.com/danielmiessler/fabric/blob/main/patterns/translate/system.md
+Create a Model from a modelfile that sets the `SYSTEM` prompt for the model using one-to-many [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns) `SYSTEM` prompts. 
 
 
 ## Design and Implementation
@@ -40,7 +33,7 @@ Personas that will interact with the environment. Platform Engineers, and AIChat
 * Used Kubebuilder `v4.3.1` to generate most of the code.
 * Used Kind to create the K8s cluster running `v1.31.0`.
 * KEDA's `HTTPScaledObject` is being used to address the **scale-to-zero** requirement.
-* Defaulted to xSmall LLMs i.e. `gemma2:2b`, `llama3.2:1b`, and `qwen2.5-coder:1.5b` in custom resource manifests. 
+* Defaulted to xSmall LLMs i.e. `gemma2:2b`, `llama3.2:1b`, or `qwen2.5-coder:1.5b` in custom resource manifests. 
 
 Legend: ❌ roadmap ✅ completed initial implementation
 
@@ -122,5 +115,14 @@ make chainsaw
 Running the script below will create install everything needed to run this locally using a kind create cluster.
 
 ```sh
+# Setup KinD cluster and install needed dependencies.
 ./from-scratch.sh
+
+# Run the sample
+kustomize build config/samples/ | kubectl -n aichat-workspace-operator-system apply -f -
+kubectl rollout status deploy team-a-aichat-openwebui -n team-a-aichat
+kubectl rollout status sts team-a-aichat-ollama -n team-a-aichat
+
+# 
+kubectl get all,ing,pvc,resourcequota -n team-a-aichat
 ```
