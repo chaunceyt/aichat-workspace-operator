@@ -1,8 +1,22 @@
-#!/bin/bash
+#!/bin/bash -e
 
-kind delete cluster
+set -o pipefail || true  # trace ERR through pipes
+set -o errtrace || true # trace ERR through commands and functions
+set -o errexit || true  # exit the script if any statement returns a non-true return value
+
+on_error(){
+    CODE="${?}" && \
+    set +x && \
+    printf "[ERROR] Error(code=%s) occurred at %s:%s command: %s\n" \
+        "${CODE}" "${BASH_SOURCE}" "${LINENO}" "${BASH_COMMAND}"
+}
+trap on_error ERR
+
+_CLUSTER_NAME=aichatworkspace
+
+kind delete cluster --name "${_CLUSTER_NAME}"
 sleep 1
-kind create cluster --config hack/kind-cluster.yaml
+kind create cluster --name "${_CLUSTER_NAME}" --config hack/kind-cluster.yaml
 sleep 1
 
 # Install Ingress controller
@@ -23,8 +37,9 @@ make generate
 make manifests
 make install
 IMG=aichatworkspace:v1 make docker-build
-kind load docker-image aichatworkspace:v1
+kind load docker-image aichatworkspace:v1 --name "${_CLUSTER_NAME}"
 IMG=aichatworkspace:v1 make deploy
 kubectl rollout restart deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
 kubectl rollout status deploy aichat-workspace-operator-controller-manager -n aichat-workspace-operator-system
 kubectl get po -n aichat-workspace-operator-system
+kubectl get node -o wide

@@ -17,7 +17,7 @@ This was created during the initialization of the project using kubebuilder. It 
 This directory contains docs about the project.
 
 ### hack/
-This was created during the initialization of the project using kubebuilder. I used it for staging files use during the provisioning of the local development environment.
+This was created during the initialization of the project using kubebuilder. I used it for staging files use during the provisioning of the local development environment. It will contain configuration that will be provisioned by the operator at some point in the future.
 
 
 ### internal/
@@ -58,6 +58,3 @@ This directory contains notes used as this project is being developed.
 ### test/
 This was created during the initialization of the project using kubebuilder. The kyverno chainsaw test was added to this directory
 
-# Operator with API
-
-This project is both an Kubernetes operator and AIChat Workspace API. The API was developed using Gin and runs within a `go func() { webapi.StartWebAPI() }()` within the operator code. 
