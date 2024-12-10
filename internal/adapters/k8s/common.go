@@ -1,16 +1,32 @@
+/*
+Copyright 2024 AIChatWorkspace Contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package k8s
 
 import (
 	"fmt"
 
-	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
-	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/utils"
+	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 )
 
 // NewNamespace returns new K8S namespace
@@ -189,8 +205,8 @@ func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string)
 				Port:       int32(port),
 			},
 			Replicas: &kedahttpv1alpha1.ReplicaStruct{
-				Min: utils.PtrInt32(0),
-				Max: utils.PtrInt32(1),
+				Min: ptr.To[int32](0),
+				Max: ptr.To[int32](1),
 			},
 			ScalingMetric: &kedahttpv1alpha1.ScalingMetricSpec{
 				Rate: &kedahttpv1alpha1.RateMetricSpec{
