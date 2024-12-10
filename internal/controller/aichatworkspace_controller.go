@@ -1,5 +1,5 @@
 /*
-Copyright 2024.
+Copyright 2024 AIChatWorkspace Contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,6 +32,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/config"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
+
 	"github.com/go-logr/logr"
 )
 
@@ -64,7 +67,7 @@ type AIChatWorkspace interface {
 }
 
 var (
-	aichatWorkspaceControllerLog = ctrl.Log.WithName("aichatworkspace-controller")
+	aichatWorkspaceControllerLog = ctrl.Log.WithName(constants.ManagedBy)
 )
 
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces,verbs=get;list;watch;create;update;patch;delete
@@ -91,6 +94,18 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name).WithValues("starting reconcile of aichatworkspace", time.Since(now))
 
 	logger.Info("starting reconciling aichatworkspace")
+
+	restConfig := ctrl.GetConfigOrDie()
+	ctrlClient, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		r.finishReconcile(err, false)
+	}
+
+	config, err := config.GetConfigFromConfigMap(ctx, ctrlClient, "aichat-workspace-operator-system")
+	if err != nil {
+		r.finishReconcile(err, false)
+	}
+	fmt.Println("config: ", config)
 
 	instance := AIChatWorkspaceInstance{
 		r:      r,
@@ -124,7 +139,7 @@ func (r *AIChatWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
-		Named("aichatworkspace").
+		Named(constants.AIChatWorkspaceName).
 		Complete(r)
 }
 
@@ -152,10 +167,6 @@ func (r *AIChatWorkspaceReconciler) patchStatus(ctx context.Context, aichat *app
 	return r.Client.Status().Patch(ctx, aichat, client.MergeFrom(latest))
 }
 
-func createInt32(x int32) *int32 {
-	return &x
-}
-
 func defaultLabels(namespace string, name string, component string) map[string]string {
 	partOf := fmt.Sprintf("aichat-workspace-%s", namespace)
 
@@ -163,14 +174,10 @@ func defaultLabels(namespace string, name string, component string) map[string]s
 		"app.kubernetes.io/name":       name,
 		"app.kubernetes.io/part-of":    partOf,
 		"app.kubernetes.io/component":  component,
-		"app.kubernetes.io/version":    "version",
-		"app.kubernetes.io/managed-by": "aichat-workspace-operator",
+		"app.kubernetes.io/version":    constants.Version,
+		"app.kubernetes.io/managed-by": constants.ManagedBy,
 		"aichatworkspace":              namespace,
 	}
-}
-
-func workloadName(cr *appsv1alpha1.AIChatWorkspace, workloadType string) string {
-	return cr.Spec.WorkspaceName + "-" + workloadType
 }
 
 // deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.

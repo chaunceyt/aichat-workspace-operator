@@ -1,3 +1,19 @@
+/*
+Copyright 2024 AIChatWorkspace Contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controller
 
 import (
@@ -9,6 +25,7 @@ import (
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/k8s"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
 func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result *ctrl.Result, aichat *appsv1alpha1.AIChatWorkspace) (*ctrl.Result, error) {
@@ -18,86 +35,83 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 
 	// ensureNamespace - create the "aichatworkspace" namespace that contains all the components required
 	// to run the AIChat Workspace.
-	namespaceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, "aichatworkspace")
+	namespaceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, constants.AIChatWorkspaceName)
 	result, err = r.ensureNamespace(ctx, aichat, k8s.NewNamespace(aichat.Spec.WorkspaceName, namespaceDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
-	resourceQuotaName := generateName(aichat.Spec.WorkspaceName, "rquota")
-	resourceQuotaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, "resourceQuota")
+	// ensureResourceQuota - creates the ResourceQuota object that limits resources that can be ran in the namespace.
+	resourceQuotaName := generateName(aichat.Spec.WorkspaceName, constants.ResourceQuotaName)
+	resourceQuotaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, aichat.Spec.WorkspaceName, constants.ResourceQuotaLabelName)
 	result, err = r.ensureResourceQuota(ctx, aichat, k8s.NewResourceQuota(aichat.Spec.WorkspaceName, resourceQuotaName, resourceQuotaDefaultLabels))
-	// result, err = r.ensurer(ctx, aichat, k8s.NewResourceQuota(aichat.Spec.WorkspaceName, resourceQuotaName, resourceQuotaDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
-	// ensurePVC - ensure the persistentvolumeclaim for web files folder is managed.
-	pvcName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	openwebuiPVCLabels := defaultLabels(aichat.Spec.WorkspaceName, pvcName, "sa")
-	result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, "2Gi", openwebuiPVCLabels))
+	// ensurePVC - ensure the persistentvolumeclaim for Open WebUI is managed.
+	pvcName := generateName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
+	openwebuiPVCLabels := defaultLabels(aichat.Spec.WorkspaceName, pvcName, constants.PVCLabelName)
+	result, err = r.ensurePVC(ctx, aichat, k8s.NewPersistentVolumeClaim(pvcName, aichat.Spec.WorkspaceName, constants.OpenwebuiDefaultVolumeSize, openwebuiPVCLabels))
 	if result != nil {
 		return result, err
 	}
 
 	// serviceAccount for the Open WebUI workload.
-	serviceAccountForOpenWebUIName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	openwebuiDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOpenWebUIName, "sa")
+	serviceAccountForOpenWebUIName := generateName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
+	openwebuiDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOpenWebUIName, constants.ServiceAccountLabelName)
 	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOpenWebUIName, aichat.Spec.WorkspaceName, openwebuiDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
 	// serviceAccout for the Ollama workload
-	serviceAccountForOllamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-	ollamaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOllamaName, "sa")
+	serviceAccountForOllamaName := generateName(aichat.Spec.WorkspaceName, constants.OllamaName)
+	ollamaDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, serviceAccountForOllamaName, constants.ServiceAccountLabelName)
 	result, err = r.ensureServiceAccount(ctx, aichat, k8s.NewServiceAccount(serviceAccountForOllamaName, aichat.Spec.WorkspaceName, ollamaDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureStatefulSet - creating the StatefulSet used to run the Ollama API
-	ollamaName := generateName(aichat.Spec.WorkspaceName, "ollama")
-	ollamaContainerPort := int32(11434)
-	ollamaVolumeSize := int32(20)
-	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, ollamaContainerPort, ollamaVolumeSize))
+	ollamaName := generateName(aichat.Spec.WorkspaceName, constants.OllamaName)
+	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, constants.OllamaPort, constants.OllamaDefaultVolumeSize))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureService - creating the Service used to route traffic to the Ollama API pod.
-	ollamaServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, ollamaName, "svc")
-	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, ollamaName, ollamaContainerPort, ollamaServiceDefaultLabels))
+	ollamaServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, ollamaName, constants.ServiceLabelName)
+	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, ollamaName, constants.OllamaPort, ollamaServiceDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
-	// ensureDeployment - creating the Deployment used to the Open WebUI workload.
-	openwebuiName := generateName(aichat.Spec.WorkspaceName, "openwebui")
-	openwebuiContainerPort := int32(8080)
-	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, openwebuiContainerPort))
+	// ensureDeployment - creating the Deployment used to deploy the Open WebUI workload.
+	openwebuiName := generateName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
+	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, constants.OpenwebuiContainerPort))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureService - creating the Service used to route traffic to the Open WebUI pod.
-	openwebuiServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, openwebuiName, "svc")
-	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, openwebuiName, openwebuiContainerPort, openwebuiServiceDefaultLabels))
+	openwebuiServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, openwebuiName, constants.ServiceLabelName)
+	result, err = r.ensureService(ctx, aichat, k8s.NewService(aichat.Spec.WorkspaceName, openwebuiName, constants.OpenwebuiContainerPort, openwebuiServiceDefaultLabels))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureIngress - creating the Ingress used for Open WebUI service
 	// proxyName := fmt.Sprintf("%s", "openwebui")
-	openwebBackend := getName(aichat.Spec.WorkspaceName, "openwebui")
-	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, "openwebui", openwebBackend, openwebuiContainerPort))
+	openwebBackend := getName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OpenwebuiName, openwebBackend, constants.OpenwebuiContainerPort))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureIngress - creating the Ingress used for Ollama service
-	ollamaBackend := getName(aichat.Spec.WorkspaceName, "ollama")
-	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, "ollama", ollamaBackend, ollamaContainerPort))
+	ollamaBackend := getName(aichat.Spec.WorkspaceName, constants.OllamaName)
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OllamaName, ollamaBackend, constants.OllamaPort))
 	if result != nil {
 		return result, err
 	}

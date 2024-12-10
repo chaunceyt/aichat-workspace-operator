@@ -1,3 +1,19 @@
+/*
+Copyright 2024 AIChatWorkspace Contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package k8s
 
 import (
@@ -9,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/utils"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
 const (
@@ -32,16 +49,12 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 	appLabels := map[string]string{defaultNameLabel: name}
 
 	// config for ollama service
-	ollamaPort := int32(11434)
+	containerImage := fmt.Sprintf("%s:%s", constants.OpenwebuiContainerImageName, openwebuiContainerImageTag)
 	serviceName := fmt.Sprintf("%s-ollama", namespace)
-	ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, namespace, ollamaPort)
-	openAIURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/v1", serviceName, namespace, ollamaPort)
+	ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, namespace, constants.OllamaPort)
+	openAIURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/v1", serviceName, namespace, constants.OllamaPort)
 	workspaceName := fmt.Sprintf("AIChat Workspace: %s", namespace)
-
 	saName := fmt.Sprintf("%s-openwebui", namespace)
-
-	// containerImage
-	containerImage := fmt.Sprintf("%s:%s", openwebuiContainerImageName, openwebuiContainerImageTag)
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -60,7 +73,7 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 					// SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
 						{
-							Name:  openwebuiContainerName,
+							Name:  constants.OpenwebuiContainerName,
 							Image: containerImage,
 							// SecurityContext: defaultSecurityContext(),
 							Env: []v1.EnvVar{
@@ -89,8 +102,8 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 							TTY:   true,
 							VolumeMounts: []v1.VolumeMount{
 								{
-									Name:      openwebuiVolumeMountName,
-									MountPath: "/app/backend/data",
+									Name:      constants.OpenwebuiVolumeMountName,
+									MountPath: constants.OpenwebuiVolumeMountPath,
 								},
 							},
 						},
@@ -112,13 +125,14 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 	}
 }
 
-func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv1.StatefulSet {
+// NewStatefulSet is responsible for creating the Ollama workload.
+func NewStatefulSet(namespace, name string, port int32, volumeSize string) *appsv1.StatefulSet {
 	appLabels := map[string]string{defaultNameLabel: name}
-	// containerImage
-	containerImage := fmt.Sprintf("%s:%s", ollamaContainerImageName, ollamaContainerImageTag)
-	saName := fmt.Sprintf("%s-ollama", namespace)
 
-	serviceName := fmt.Sprintf("%s-%s", namespace, "ollama")
+	// config for Open WebUI
+	containerImage := fmt.Sprintf("%s:%s", constants.OllamaContainerImageName, ollamaContainerImageTag)
+	saName := fmt.Sprintf("%s-ollama", namespace)
+	serviceName := fmt.Sprintf("%s-%s", namespace, constants.OllamaName)
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +153,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 							v1.ReadWriteOnce,
 						},
 						Resources: v1.VolumeResourceRequirements{
-							Requests: v1.ResourceList{"storage": resource.MustParse("10Gi")},
+							Requests: v1.ResourceList{"storage": resource.MustParse(volumeSize)},
 						},
 					},
 				},
@@ -153,7 +167,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize int32) *appsv
 					SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
 						{
-							Name:  ollamaContainerName,
+							Name:  constants.OllamaContainerName,
 							Image: containerImage,
 							Env: []v1.EnvVar{
 								{
