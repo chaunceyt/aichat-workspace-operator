@@ -25,12 +25,20 @@ import (
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/k8s"
+	"github.com/chaunceyt/aichat-workspace-operator/internal/config"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
 func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result *ctrl.Result, aichat *appsv1alpha1.AIChatWorkspace) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	var err error
+
+	// get config
+	config, err := config.GetConfig()
+	if err != nil {
+		return result, err
+	}
+
 	logger.Info("reconciling aichatworkspace")
 
 	// ensureNamespace - create the "aichatworkspace" namespace that contains all the components required
@@ -75,7 +83,7 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 
 	// ensureStatefulSet - creating the StatefulSet used to run the Ollama API
 	ollamaName := generateName(aichat.Spec.WorkspaceName, constants.OllamaName)
-	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, constants.OllamaPort, constants.OllamaDefaultVolumeSize))
+	result, err = r.ensureStatefulSet(ctx, aichat, k8s.NewStatefulSet(aichat.Spec.WorkspaceName, ollamaName, constants.OllamaPort, constants.OllamaDefaultVolumeSize, config.OllamaImageTag))
 	if result != nil {
 		return result, err
 	}
@@ -89,7 +97,7 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 
 	// ensureDeployment - creating the Deployment used to deploy the Open WebUI workload.
 	openwebuiName := generateName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
-	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, constants.OpenwebuiContainerPort))
+	result, err = r.ensureDeployment(ctx, aichat, k8s.NewDeployment(aichat.Spec.WorkspaceName, openwebuiName, constants.OpenwebuiContainerPort, config.OpenwebUIImageTag))
 	if result != nil {
 		return result, err
 	}

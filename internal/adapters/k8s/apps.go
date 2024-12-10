@@ -23,8 +23,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
-	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/utils"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
@@ -39,13 +39,8 @@ const (
 	ollamaContainerImageName    = "ollama/ollama"
 )
 
-var (
-	openwebuiContainerImageTag = "main"
-	ollamaContainerImageTag    = "0.4.1"
-)
-
 // NewDeployment is responsible for creating the Open WebUI workload.
-func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
+func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTag string) *appsv1.Deployment {
 	appLabels := map[string]string{defaultNameLabel: name}
 
 	// config for ollama service
@@ -68,7 +63,7 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					RestartPolicy:                v1.RestartPolicyAlways,
 					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: utils.PtrBool(false),
+					AutomountServiceAccountToken: ptr.To[bool](false),
 					// at the moment having issues getting open webui to run as non-root
 					// SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
@@ -126,7 +121,7 @@ func NewDeployment(namespace, name string, port int32) *appsv1.Deployment {
 }
 
 // NewStatefulSet is responsible for creating the Ollama workload.
-func NewStatefulSet(namespace, name string, port int32, volumeSize string) *appsv1.StatefulSet {
+func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollamaContainerImageTag string) *appsv1.StatefulSet {
 	appLabels := map[string]string{defaultNameLabel: name}
 
 	// config for Open WebUI
@@ -163,7 +158,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string) *apps
 				Spec: v1.PodSpec{
 					RestartPolicy:                v1.RestartPolicyAlways,
 					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: utils.PtrBool(false),
+					AutomountServiceAccountToken: ptr.To[bool](false),
 					SecurityContext:              defaultPodSecurityContext(),
 					Containers: []v1.Container{
 						{
@@ -195,15 +190,15 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string) *apps
 // defaultSecurityContext - sets the security context for each container
 func defaultSecurityContext() *v1.SecurityContext {
 	return &v1.SecurityContext{
-		AllowPrivilegeEscalation: utils.PtrBool(false),
+		AllowPrivilegeEscalation: ptr.To[bool](false),
 		Capabilities: &v1.Capabilities{
 			Drop: []v1.Capability{
 				"ALL",
 			},
 		},
-		Privileged:             utils.PtrBool(false),
-		ReadOnlyRootFilesystem: utils.PtrBool(true),
-		RunAsNonRoot:           utils.PtrBool(true),
+		Privileged:             ptr.To[bool](false),
+		ReadOnlyRootFilesystem: ptr.To[bool](true),
+		RunAsNonRoot:           ptr.To[bool](true),
 		SeccompProfile: &v1.SeccompProfile{
 			Type: v1.SeccompProfileType("RuntimeDefault"),
 		},
@@ -213,8 +208,8 @@ func defaultSecurityContext() *v1.SecurityContext {
 // defaultPodSecurityContext - sets the pod's security context
 func defaultPodSecurityContext() *v1.PodSecurityContext {
 	return &v1.PodSecurityContext{
-		FSGroup:    utils.PtrInt64(10001),
-		RunAsUser:  utils.PtrInt64(10001),
-		RunAsGroup: utils.PtrInt64(10001),
+		FSGroup:    ptr.To[int64](10001),
+		RunAsUser:  ptr.To[int64](10001),
+		RunAsGroup: ptr.To[int64](10001),
 	}
 }

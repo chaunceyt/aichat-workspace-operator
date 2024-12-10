@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
-	"github.com/chaunceyt/aichat-workspace-operator/internal/config"
 	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 
 	"github.com/go-logr/logr"
@@ -94,18 +93,6 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name).WithValues("starting reconcile of aichatworkspace", time.Since(now))
 
 	logger.Info("starting reconciling aichatworkspace")
-
-	restConfig := ctrl.GetConfigOrDie()
-	ctrlClient, err := client.New(restConfig, client.Options{})
-	if err != nil {
-		r.finishReconcile(err, false)
-	}
-
-	config, err := config.GetConfigFromConfigMap(ctx, ctrlClient, "aichat-workspace-operator-system")
-	if err != nil {
-		r.finishReconcile(err, false)
-	}
-	fmt.Println("config: ", config)
 
 	instance := AIChatWorkspaceInstance{
 		r:      r,

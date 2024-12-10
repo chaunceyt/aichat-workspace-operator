@@ -19,14 +19,14 @@ package k8s
 import (
 	"fmt"
 
-	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 
-	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/utils"
+	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 )
 
 // NewNamespace returns new K8S namespace
@@ -205,8 +205,8 @@ func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string)
 				Port:       int32(port),
 			},
 			Replicas: &kedahttpv1alpha1.ReplicaStruct{
-				Min: utils.PtrInt32(0),
-				Max: utils.PtrInt32(1),
+				Min: ptr.To[int32](0),
+				Max: ptr.To[int32](1),
 			},
 			ScalingMetric: &kedahttpv1alpha1.ScalingMetricSpec{
 				Rate: &kedahttpv1alpha1.RateMetricSpec{

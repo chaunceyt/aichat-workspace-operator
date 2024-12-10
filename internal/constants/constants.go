@@ -17,9 +17,12 @@ limitations under the License.
 package constants
 
 const (
-	Version             = "0.0.1"
-	ManagedBy           = "aichat-workspace-operator"
-	AIChatWorkspaceName = "aichatworkspace"
+	Version                      = "0.0.1"
+	ManagedBy                    = "aichat-workspace-operator"
+	AIChatWorkspaceName          = "aichatworkspace"
+	AIChatWorkspaceFinalizerName = "core.aichatworkspace.io/finalizer"
+	AIChatWorkspaceNamespace     = "aichat-workspace-operator-system"
+	AIChatWorspaceConfigMapName  = "aichat-workspace-operator-config"
 
 	// Open WebUI
 	OpenwebuiName               = "openwebui"
@@ -27,8 +30,9 @@ const (
 	OpenwebuiVolumeMountPath    = "/app/backend/data"
 	OpenwebuiContainerName      = "open-webui"
 	OpenwebuiContainerImageName = "ghcr.io/open-webui/open-webui"
-	OpenwebuiContainerPort      = int32(8080)
-	OpenwebuiDefaultVolumeSize  = "2Gi"
+
+	OpenwebuiContainerPort     = int32(8080)
+	OpenwebuiDefaultVolumeSize = "2Gi"
 
 	// Ollama
 	OllamaName               = "ollama"
@@ -52,4 +56,8 @@ const (
 	ServiceAccountLabelName = "sa"
 	ResourceQuotaLabelName  = "resourceQuota"
 	PVCLabelName            = "pvc"
+
+	// Configmap Keys
+	OpenwebUIImageTag = "openwebUIImageTag"
+	OllamaImageTag    = "ollamaImageTag"
 )

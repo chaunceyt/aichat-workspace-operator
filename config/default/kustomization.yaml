@@ -32,6 +32,7 @@ resources:
 # Only CR(s) which requires webhooks and are applied on namespaces labeled with 'webhooks: enabled' will
 # be able to communicate with the Webhook Server.
 #- ../network-policy
+- system-configmap.yaml
 - mysql-secret.yaml
 - mysql-storage.yaml
 - mysql-deployment.yaml
