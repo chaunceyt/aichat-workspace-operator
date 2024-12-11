@@ -14,13 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package ollama
+package modelfiles
 
-// modelfile
-// https://github.com/ollama/ollama/blob/main/docs/modelfile.md
-var modelfiles = map[string]string{
-	"ai":            aiSystem,
-	"createSummary": createSummary,
-	"explainCode":   explainCode,
-	"translate":     translate,
+import "fmt"
+
+func GetSystemPromptPattern(model, pattern string) string {
+	return prompt(model, pattern)
+}
+
+func prompt(model, pattern string) string {
+	var promptTemplate = `
+FROM %s
+	
+PARAMETER temperature 0.1
+PARAMETER top_p 0.5
+PARAMETER top_k 40
+PARAMETER seed 1
+	
+SYSTEM """
+%s"""	
+		`
+
+	return fmt.Sprintf(promptTemplate, model, pattern)
 }

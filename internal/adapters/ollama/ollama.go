@@ -23,6 +23,8 @@ import (
 	"net/url"
 
 	ollama "github.com/ollama/ollama/api"
+
+	"github.com/chaunceyt/aichat-workspace-operator/internal/adapters/ai/modelfiles"
 )
 
 // https://github.com/ollama/ollama/blob/main/docs/api.md
@@ -222,7 +224,7 @@ func DoesModelExist(modelName string, defaultBaseURL string) (bool, error) {
 
 // CreateFromModelFile
 // https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
-func CreateFromModelFile(modelName, defaultBaseURL string) (bool, error) {
+func CreateFromModelFile(modelName, defaultBaseURL string, patterns []string) (bool, error) {
 	httpClient := http.DefaultClient
 
 	baseClientURL, err := url.Parse(defaultBaseURL)
@@ -239,10 +241,10 @@ func CreateFromModelFile(modelName, defaultBaseURL string) (bool, error) {
 
 	ctx := context.Background()
 
-	for p, filename := range modelfiles {
-		createModelName := fmt.Sprintf("%s-%s", modelName, p)
-		modelfile := fmt.Sprintf(filename, modelName)
-		fmt.Printf("Creating %s from %s pattern modelfile\n", createModelName, p)
+	for _, pattern := range patterns {
+		createModelName := fmt.Sprintf("%s-%s", modelName, pattern)
+		modelfile := modelfiles.GetSystemPromptPattern(modelName, pattern)
+		fmt.Printf("Creating %s from %s pattern modelfile\n", createModelName, pattern)
 		err = client.Create(ctx, &ollama.CreateRequest{
 			Model:     createModelName,
 			Modelfile: modelfile,

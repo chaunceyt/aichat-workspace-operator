@@ -90,7 +90,7 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 				logger.Error(err, "Failed to pull Model", "ModelName", llm, "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
 				return &ctrl.Result{}, err
 			}
-			ollama.CreateFromModelFile(llm, ollamaServerURI)
+			ollama.CreateFromModelFile(llm, ollamaServerURI, instance.Spec.Patterns)
 		}
 	}
 
