@@ -32,6 +32,10 @@ type AIChatWorkspaceSpec struct {
 
 	// List of default models for this workspace.
 	Models []string `json:"models"`
+
+	// List of patterns
+	// https://github.com/danielmiessler/fabric/tree/main/patterns
+	Patterns []string `json:"patterns,omitempty"`
 }
 
 // AIChatWorkspaceStatus defines the observed state of AIChatWorkspace.
