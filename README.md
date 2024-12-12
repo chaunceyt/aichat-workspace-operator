@@ -50,7 +50,7 @@ Legend: ❌ roadmap ✅ completed initial implementation
 * ❌ Scale-to-Zero after no request are received for a period of time. (scale up on new requests) [testing](hack/scale-to-zero/)
 * ❌ Add auth to the Ollama endpoint, consider envoy sidecar proxy providing auth or use basic-auth for ingress-nginx. (basic-auth, jwt) [testing](hack/envoy-sidecar/)
 * ❌ List of resource in the describe of the aichatworkspace object. (pods, pvc, svc, models running, etc)
-* ❌ Support for each `system.md` located under [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
+* ✅ Support for most of the `system.md` located under [fabric/patterns](https://github.com/danielmiessler/fabric/tree/main/patterns)
 * ❌ API endpoint to manage AIChat workspace. (use: curl, postman, etc)
 * ❌ Built in SRE that monitors the events of AIChat Workspace workloads and interact with LLM to identify a solution.
 * ❌ Observability (i.e, grafana, loki, prometheus, promtail, and tempo)
@@ -71,9 +71,7 @@ Legend: ❌ roadmap ✅ completed initial implementation
 * ✅ Ingress object for Open WebUI
 * ❌ KEDA HTTPScaledObject to scale the Open WebUI to zero after no requests are received based on `scaledownPeriod`.
 * ❌ K8s ExternalService for open-webui scale-to-zero functionality
-* ❌ NetworkPolicy allow traffic to Ollama ingress from Open WebUI only
-* ❌ NetworkPolicy allow traffic from ingress controller namespace to Open WebUI
-* ❌ KEDA Kubernetes Workload to scale based on the number of Open WebUI replicas
+* ❌ NetworkPolicy allow traffic from ingress controller namespace to Open WebUI and Ollama
 
 ### Dependencies
 

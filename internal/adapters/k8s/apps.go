@@ -29,14 +29,8 @@ import (
 )
 
 const (
-	defaultNameLabel            = "app.kubernetes.io/name"
-	defaultInstanceLabel        = "app.kubernetes.io/instance"
-	openwebuiVolumeMountName    = "webui-volume"
-	openwebuiContainerName      = "open-webui"
-	openwebuiContainerImageName = "ghcr.io/open-webui/open-webui"
-	ollamaVolumeMountName       = "ollama-volume"
-	ollamaContainerName         = "ollama"
-	ollamaContainerImageName    = "ollama/ollama"
+	defaultNameLabel     = "app.kubernetes.io/name"
+	defaultInstanceLabel = "app.kubernetes.io/instance"
 )
 
 // NewDeployment is responsible for creating the Open WebUI workload.
@@ -105,7 +99,7 @@ func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTa
 					},
 					Volumes: []v1.Volume{
 						{
-							Name: openwebuiVolumeMountName,
+							Name: constants.OpenwebuiVolumeMountName,
 							VolumeSource: v1.VolumeSource{
 								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 									ClaimName: name,
@@ -140,7 +134,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 			VolumeClaimTemplates: []v1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ollamaVolumeMountName,
+						Name:      constants.OllamaVolumeMountName,
 						Namespace: namespace,
 					},
 					Spec: v1.PersistentVolumeClaimSpec{
@@ -175,7 +169,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 							TTY:             true,
 							VolumeMounts: []v1.VolumeMount{
 								{
-									Name:      ollamaVolumeMountName,
+									Name:      constants.OllamaVolumeMountName,
 									MountPath: "/.ollama",
 								},
 							},

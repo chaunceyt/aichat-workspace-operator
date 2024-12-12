@@ -58,6 +58,7 @@ const (
 	PVCLabelName            = "pvc"
 
 	// Configmap Keys
+	DefaultDomain     = "defaultDomain"
 	OpenwebUIImageTag = "openwebUIImageTag"
 	OllamaImageTag    = "ollamaImageTag"
 )

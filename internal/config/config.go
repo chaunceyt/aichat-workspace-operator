@@ -30,11 +30,51 @@ import (
 )
 
 type Config struct {
+	DefaultDomain     string
 	OpenwebUIImageTag string
 	OllamaImageTag    string
 }
 
 func GetConfig() (*Config, error) {
+	configMap, err := configMap()
+	if err != nil {
+		return nil, err
+	}
+
+	openwebUIImageTag, err := getConfigMapString(configMap, constants.OpenwebUIImageTag)
+	if err != nil {
+		return nil, err
+	}
+
+	ollamaImageTag, err := getConfigMapString(configMap, constants.OllamaImageTag)
+	if err != nil {
+		return nil, err
+	}
+
+	defaultDomain, err := getConfigMapString(configMap, constants.DefaultDomain)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Config{
+		DefaultDomain:     defaultDomain,
+		OpenwebUIImageTag: openwebUIImageTag,
+		OllamaImageTag:    ollamaImageTag,
+	}, nil
+
+}
+
+func getConfigMapString(configMap *corev1.ConfigMap, key string) (string, error) {
+	if s, ok := configMap.Data[key]; ok {
+		return s, nil
+	}
+	if b, ok := configMap.BinaryData[key]; ok {
+		return string(b), nil
+	}
+	return "", fmt.Errorf("malformed Config Map: required key %q not found", key)
+}
+
+func configMap() (*corev1.ConfigMap, error) {
 	ctx := context.Background()
 	restConfig := ctrl.GetConfigOrDie()
 	ctrlClient, err := client.New(restConfig, client.Options{})
@@ -50,27 +90,6 @@ func GetConfig() (*Config, error) {
 		return nil, err
 	}
 
-	openwebUIImageTag, err := getConfigMapString(configMap, constants.OpenwebUIImageTag)
-	if err != nil {
-		return nil, err
-	}
-	ollamaImageTag, err := getConfigMapString(configMap, constants.OllamaImageTag)
-	if err != nil {
-		return nil, err
-	}
+	return configMap, nil
 
-	return &Config{
-		OpenwebUIImageTag: openwebUIImageTag,
-		OllamaImageTag:    ollamaImageTag,
-	}, nil
-}
-
-func getConfigMapString(configMap *corev1.ConfigMap, key string) (string, error) {
-	if s, ok := configMap.Data[key]; ok {
-		return s, nil
-	}
-	if b, ok := configMap.BinaryData[key]; ok {
-		return string(b), nil
-	}
-	return "", fmt.Errorf("malformed Config Map: required key %q not found", key)
 }

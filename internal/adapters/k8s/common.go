@@ -27,6 +27,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+
+	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
 // NewNamespace returns new K8S namespace
@@ -86,6 +88,10 @@ func NewPersistentVolumeClaim(name string, namespace string, storageSize string,
 
 func NewService(namespace string, name string, port int32, appLabels map[string]string) *corev1.Service {
 	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -109,9 +115,12 @@ func NewService(namespace string, name string, port int32, appLabels map[string]
 // the ingress for open-webui and ollama will point to these
 func NewExternalService(namespace string, name, workload string, appLabels map[string]string) *corev1.Service {
 	// TODO: move to const package.
-	kedaProxy := "keda-add-ons-http-interceptor-proxy.keda"
 	proxyName := fmt.Sprintf("%s-%s", namespace, workload)
 	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getName(proxyName, "proxy"),
 			Namespace: namespace,
@@ -119,7 +128,7 @@ func NewExternalService(namespace string, name, workload string, appLabels map[s
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: kedaProxy,
+			ExternalName: constants.KedaHttpInterceptorProxy,
 		},
 	}
 }
@@ -137,15 +146,15 @@ func NewResourceQuota(namespace string, name string, appLabels map[string]string
 		},
 		Spec: corev1.ResourceQuotaSpec{
 			Hard: corev1.ResourceList{
-				"pods":                   resource.MustParse("2"),
-				"persistentvolumeclaims": resource.MustParse("2"),
-				"services":               resource.MustParse("5"),
+				"pods":                   resource.MustParse(constants.MaxPods),
+				"persistentvolumeclaims": resource.MustParse(constants.MaxPersistentVolumeClaims),
+				"services":               resource.MustParse(constants.MaxService),
 			},
 		},
 	}
 }
 
-func NewIngress(workspacename, workload, backendName string, backendPort int32) *networkingv1.Ingress {
+func NewIngress(workspacename, workload, backendName, hostname string, backendPort int32) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
 	return &networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{
@@ -163,7 +172,7 @@ func NewIngress(workspacename, workload, backendName string, backendPort int32) 
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
 				{
-					Host: setIngressDNSHost(workspacename, workload),
+					Host: hostname,
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
@@ -190,6 +199,10 @@ func NewIngress(workspacename, workload, backendName string, backendPort int32) 
 
 func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string) *kedahttpv1alpha1.HTTPScaledObject {
 	return &kedahttpv1alpha1.HTTPScaledObject{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "http.keda.sh/v1alpha1",
+			Kind:       "HTTPScaledObject",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getName(workspacename, workload),
 			Namespace: workspacename,
@@ -215,13 +228,6 @@ func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string)
 			},
 		},
 	}
-}
-
-// setIngressDNSHost: team-a-aichat.openwebui.localtest.me
-func setIngressDNSHost(workspace string, workload string) string {
-	defaultDomain := "localtest.me"
-	dnsName := fmt.Sprintf("%s.%s.%s", workspace, workload, defaultDomain)
-	return dnsName
 }
 
 func getName(workspace, workload string) string {

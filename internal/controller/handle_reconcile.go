@@ -112,14 +112,16 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	// ensureIngress - creating the Ingress used for Open WebUI service
 	// proxyName := fmt.Sprintf("%s", "openwebui")
 	openwebBackend := getName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
-	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OpenwebuiName, openwebBackend, constants.OpenwebuiContainerPort))
+	openwebuiDNSName := setIngressDNSHost(config, aichat.Spec.WorkspaceName, constants.OpenwebuiName)
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OpenwebuiName, openwebBackend, openwebuiDNSName, constants.OpenwebuiContainerPort))
 	if result != nil {
 		return result, err
 	}
 
 	// ensureIngress - creating the Ingress used for Ollama service
 	ollamaBackend := getName(aichat.Spec.WorkspaceName, constants.OllamaName)
-	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OllamaName, ollamaBackend, constants.OllamaPort))
+	ollamaDNSName := setIngressDNSHost(config, aichat.Spec.WorkspaceName, constants.OllamaName)
+	result, err = r.ensureIngress(ctx, aichat, k8s.NewIngress(aichat.Spec.WorkspaceName, constants.OllamaName, ollamaBackend, ollamaDNSName, constants.OllamaPort))
 	if result != nil {
 		return result, err
 	}
@@ -129,4 +131,19 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 func getName(workspace, workload string) string {
 	name := fmt.Sprintf("%s-%s", workspace, workload)
 	return name
+}
+
+// setIngressDNSHost:
+// - <workspaceName>.<defaultDomain.tld> for openwebui
+// - <workspaceName>-api.<defaultDomain.tld> for ollama
+func setIngressDNSHost(config *config.Config, workspace string, workload string) string {
+	var dnsName string
+	switch workload {
+	case "ollama":
+		dnsName = fmt.Sprintf("%s-api.%s", workspace, config.DefaultDomain)
+	case "openwebui":
+		dnsName = fmt.Sprintf("%s.%s", workspace, config.DefaultDomain)
+	}
+
+	return dnsName
 }
