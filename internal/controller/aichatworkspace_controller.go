@@ -79,15 +79,19 @@ var (
 // +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;watch;list
 // +kubebuilder:rbac:groups="http.keda.sh",resources=httpscaledobjects,verbs=*
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the AIChatWorkspace object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
+/**
+ * Reconciles an AIChatWorkspace object by executing a series of steps in order.
+ *
+ * Reconcile is part of the main kubernetes reconciliation loop which aims to
+ * move the current state of the cluster closer to the desired state.
+ *
+ * @param ctx The context for the reconciliation request.
+ * @param req The request to reconcile, containing the namespace and name of the AIChatWorkspace object.
+ * @return A ctrl.Result indicating whether the reconciliation was successful or if it should be retried.
+ *
+ * For more details, check Reconcile and its Result here:
+ * - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.1/pkg/reconcile
+ */
 func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	now := time.Now()
 	logger := log.FromContext(ctx, "ns", req.NamespacedName.Namespace, "cr", req.NamespacedName.Name).WithValues("starting reconcile of aichatworkspace", time.Since(now))
@@ -115,7 +119,17 @@ func (r *AIChatWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return initStep.execute(&instance)
 }
 
-// SetupWithManager sets up the controller with the Manager.
+/**
+ * Sets up the AIChatWorkspaceReconciler with the provided manager.
+ *
+ * This function is responsible for setting up the controller's dependencies and
+ * registering it with the manager. It also defines the resources that the
+ * controller owns, which includes Namespaces, ResourceQuotas, ServiceAccounts,
+ * PersistentVolumeClaims, Services, Deployments, and StatefulSets.
+ *
+ * @param mgr The manager to set up the controller with.
+ * @return An error if there is an issue setting up the controller, or nil otherwise.
+ */
 func (r *AIChatWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&appsv1alpha1.AIChatWorkspace{}).
@@ -130,6 +144,19 @@ func (r *AIChatWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+/**
+ * Finishes the reconciliation process by determining if it was successful or not.
+ *
+ * If an error occurred during the reconciliation, this function will return a
+ * ctrl.Result with Requeue set to true and RequeueAfter set to ReconcileErrorInterval.
+ * If no error occurred, but requeueImmediate is true, it will return a ctrl.Result
+ * with Requeue set to true and RequeueAfter set to 0. Otherwise, it will return a
+ * ctrl.Result with Requeue set to true and RequeueAfter set to ReconcileSuccessInterval.
+ *
+ * @param err The error that occurred during reconciliation, if any.
+ * @param requeueImmediate Whether or not the controller should be immediately requeued.
+ * @return A ctrl.Result indicating whether the reconciliation was successful or if it should be retried.
+ */
 func (r *AIChatWorkspaceReconciler) finishReconcile(err error, requeueImmediate bool) (ctrl.Result, error) {
 	if err != nil {
 		interval := ReconcileErrorInterval
@@ -145,6 +172,17 @@ func (r *AIChatWorkspaceReconciler) finishReconcile(err error, requeueImmediate 
 	return ctrl.Result{Requeue: true, RequeueAfter: interval}, nil
 }
 
+/**
+ * Patches the status of an AIChatWorkspace object.
+ *
+ * This function retrieves the latest version of the AIChatWorkspace object from the Kubernetes API,
+ * and then patches its status using the provided object. It returns an error if there is a problem
+ * retrieving or patching the object.
+ *
+ * @param ctx The context for the request to the Kubernetes API.
+ * @param aichat The AIChatWorkspace object to be patched.
+ * @return An error if there was a problem patching the object, or nil otherwise.
+ */
 func (r *AIChatWorkspaceReconciler) patchStatus(ctx context.Context, aichat *appsv1alpha1.AIChatWorkspace) error {
 	key := client.ObjectKeyFromObject(aichat)
 	latest := &appsv1alpha1.AIChatWorkspace{}
@@ -154,6 +192,18 @@ func (r *AIChatWorkspaceReconciler) patchStatus(ctx context.Context, aichat *app
 	return r.Client.Status().Patch(ctx, aichat, client.MergeFrom(latest))
 }
 
+/**
+ * Returns the default labels for an AIChatWorkspace object.
+ *
+ * The function generates a set of default labels based on the provided namespace and name,
+ * as well as the component. These labels are used to identify the resources created by
+ * the AIChatWorkspace controller.
+ *
+ * @param namespace The namespace where the AIChatWorkspace is running.
+ * @param name The name of the AIChatWorkspace object.
+ * @param component The component that these labels belong to (e.g., "aichat-workspace").
+ * @return A map of default labels for an AIChatWorkspace object.
+ */
 func defaultLabels(namespace string, name string, component string) map[string]string {
 	partOf := fmt.Sprintf("aichat-workspace-%s", namespace)
 
@@ -167,16 +217,18 @@ func defaultLabels(namespace string, name string, component string) map[string]s
 	}
 }
 
-// deleteAIChatWorkspace is responsible for cleaning up the resources created for the aichat workspace.
-// deleting the namespace ensures each of the objects created are deleted.
-//   - resourcequota
-//   - serviceaccount for ollama api
-//   - serviceaccount for openwebui
-//   - statefulset for Ollama API
-//   - service for Ollama API
-//   - deployment for Open WebUI
-//   - service for Open WebUI
-//   - ingress for Open WebUI
+/**
+ * Deletes an AIChatWorkspace object and its associated resources.
+ *
+ * This function takes a context, logger, and instance as parameters. It deletes the
+ * namespace with the given name from the spec of the provided instance. If any error
+ * occurs during this process, it returns that error; otherwise, it logs information about
+ * deleting the AIChatWorkspace object and returns nil.
+ *
+ * @param ctx The context for the request to the Kubernetes API.
+ * @param instance The AIChatWorkspace object to be deleted.
+ * @return An error if there is a problem deleting the resources associated with the AIChatWorkspace object, or nil otherwise.
+ */
 func (r *AIChatWorkspaceReconciler) deleteAIChatWorkspace(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace) error {
 	logger := log.FromContext(ctx)
 
@@ -195,6 +247,16 @@ func (r *AIChatWorkspaceReconciler) deleteAIChatWorkspace(ctx context.Context, i
 	return nil
 }
 
+/**
+ * Generates a name by combining the workspace and name.
+ *
+ * This function takes two parameters: the workspace and the name. It combines these
+ * two strings with a hyphen in between to generate a unique name.
+ *
+ * @param workspace The workspace string to be combined with the name.
+ * @param name The name string to be combined with the workspace.
+ * @return A generated name that is a combination of the workspace and name.
+ */
 func generateName(workspace, name string) string {
 	return fmt.Sprintf("%s-%s", workspace, name)
 }

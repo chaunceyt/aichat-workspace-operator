@@ -29,6 +29,17 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+/**
+ * Ensures the existence of a ServiceAccount in the specified namespace.
+ *
+ * If the ServiceAccount does not exist, it will be created. If it already exists,
+ * this function will return without modifying it.
+ *
+ * @param ctx The context for the request.
+ * @param instance The AIChatWorkspace instance that owns the ServiceAccount.
+ * @param sa The ServiceAccount to ensure existence of.
+ * @return A ctrl.Result and an error, or nil if no action is required.
+ */
 func (r *AIChatWorkspaceReconciler) ensureServiceAccount(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sa *corev1.ServiceAccount) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

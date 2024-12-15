@@ -109,6 +109,13 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 		return result, err
 	}
 
+	// ensureService - creating the Service used to route traffic to the Open WebUI pod.
+	openwebuiExternalServiceDefaultLabels := defaultLabels(aichat.Spec.WorkspaceName, openwebuiName, constants.ServiceLabelName)
+	result, err = r.ensureService(ctx, aichat, k8s.NewExternalService(aichat.Spec.WorkspaceName, openwebuiExternalServiceDefaultLabels))
+	if result != nil {
+		return result, err
+	}
+
 	// ensureIngress - creating the Ingress used for Open WebUI service
 	// proxyName := fmt.Sprintf("%s", "openwebui")
 	openwebBackend := getName(aichat.Spec.WorkspaceName, constants.OpenwebuiName)
@@ -125,6 +132,13 @@ func (r *AIChatWorkspaceReconciler) handleReconcile(ctx context.Context, result 
 	if result != nil {
 		return result, err
 	}
+
+	// hosts := []string{openwebuiDNSName}
+	// result, err = r.ensureHTTPScaledObject(ctx, aichat, k8s.NewHttpSo(aichat.Spec.WorkspaceName, "Deployment", constants.OpenwebuiName, constants.OpenwebuiContainerPort, hosts))
+	// if result != nil {
+	// 	return result, err
+	// }
+
 	return result, nil
 }
 

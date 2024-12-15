@@ -28,6 +28,9 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+// ensureIngress ensures that the specified ingress resource exists in the cluster.
+// If it does not exist, it will be created. If an error occurs during this process,
+// it will be logged and returned.
 func (r *AIChatWorkspaceReconciler) ensureIngress(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, ing *networkingv1.Ingress) (*reconcile.Result, error) {
 	logger := log.FromContext(ctx)
 	found := &networkingv1.Ingress{}

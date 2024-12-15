@@ -30,8 +30,16 @@ import (
 // https://github.com/ollama/ollama/blob/main/docs/api.md
 
 // PullModel Download a model from the ollama library.
-// https://github.com/ollama/ollama/blob/main/docs/api.md#pull-a-model
-// TODO add support for huggingface
+/**
+ * Downloads a model from the ollama library.
+ *
+ * @param modelName The name of the model to download.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return An error if the download fails, or nil otherwise.
+ *
+ * https://github.com/ollama/ollama/blob/main/docs/api.md#pull-a-model
+ * TODO: add support for huggingface (confirm it works)
+ */
 func PullModel(modelName string, defaultBaseURL string) error {
 	httpClient := http.DefaultClient
 
@@ -61,6 +69,14 @@ func PullModel(modelName string, defaultBaseURL string) error {
 	return nil
 }
 
+/**
+ * Copies a model from the source name to the destination name.
+ *
+ * @param sourceName The source name of the model to copy.
+ * @param destinationName The destination name for the copied model.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return An error if the copy operation fails, or nil otherwise.
+ */
 func CopyModel(sourceName, destinationName string, defaultBaseURL string) error {
 	httpClient := http.DefaultClient
 
@@ -86,6 +102,14 @@ func CopyModel(sourceName, destinationName string, defaultBaseURL string) error 
 	return nil
 }
 
+/**
+ * Creates a new model in the AIChat Workspace.
+ *
+ * @param modelName The name of the model to create.
+ * @param modelFile The file path of the model to upload.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return An error if the creation fails, or nil otherwise.
+ */
 func CreateModel(modelName, modelFile string, defaultBaseURL string) error {
 	httpClient := http.DefaultClient
 
@@ -117,6 +141,13 @@ func CreateModel(modelName, modelFile string, defaultBaseURL string) error {
 	return nil
 }
 
+/**
+ * Deletes a model from the AIChat Workspace.
+ *
+ * @param modelName The name of the model to delete.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return An error if the deletion fails, or nil otherwise.
+ */
 func DeleteModel(modelName, defaultBaseURL string) error {
 	httpClient := http.DefaultClient
 
@@ -141,6 +172,13 @@ func DeleteModel(modelName, defaultBaseURL string) error {
 	return nil
 }
 
+/**
+ * Shows details of a model in the AIChat Workspace.
+ *
+ * @param modelName The name of the model to show details for.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return A ModelDetails object containing information about the model, or an error if the operation fails.
+ */
 func ShowModel(modelName, defaultBaseURL string) (ollama.ModelDetails, error) {
 	httpClient := http.DefaultClient
 
@@ -166,6 +204,12 @@ func ShowModel(modelName, defaultBaseURL string) (ollama.ModelDetails, error) {
 	return rp.Details, nil
 }
 
+/**
+ * Lists all models in the AIChat Workspace.
+ *
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return A list of model names as strings, or an error if the operation fails.
+ */
 func ListModels(defaultBaseURL string) ([]string, error) {
 	httpClient := http.DefaultClient
 
@@ -192,7 +236,13 @@ func ListModels(defaultBaseURL string) ([]string, error) {
 	return models, nil
 }
 
-// https://github.com/ollama/ollama/blob/main/docs/api.md#list-local-models
+/**
+ * Checks if a model exists in the AIChat Workspace.
+ *
+ * @param modelName The name of the model to check for existence.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return A boolean indicating whether the model exists, and an error if the operation fails.
+ */
 func DoesModelExist(modelName string, defaultBaseURL string) (bool, error) {
 	httpClient := http.DefaultClient
 
@@ -222,8 +272,18 @@ func DoesModelExist(modelName string, defaultBaseURL string) (bool, error) {
 	return false, nil
 }
 
-// CreateFromModelFile
-// https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
+/**
+ * Creates new models from the provided model name and SYSTEM prompt patterns.
+ *
+ * @param modelName The base model name to create.
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @param patterns List of string patterns for creating multiple models with a single request.
+ * @return A boolean indicating whether all creations were successful, or an error if any creation fails.
+ *
+ * https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
+ * Uses patterns from https://github.com/danielmiessler/fabric/tree/main/patterns
+ * TODO: rename to CreateFromSystemPromptPattern
+ */
 func CreateFromModelFile(modelName, defaultBaseURL string, patterns []string) (bool, error) {
 	httpClient := http.DefaultClient
 
@@ -258,6 +318,12 @@ func CreateFromModelFile(modelName, defaultBaseURL string, patterns []string) (b
 	return false, nil
 }
 
+/**
+ * Lists the names of all running models in the AIChat Workspace.
+ *
+ * @param defaultBaseURL The base URL of the ollama API.
+ * @return A list of model names as strings, or an error if the operation fails.
+ */
 func ListRunningModels(defaultBaseURL string) ([]string, error) {
 	httpClient := http.DefaultClient
 
@@ -285,11 +351,4 @@ func ListRunningModels(defaultBaseURL string) ([]string, error) {
 	}
 
 	return models, nil
-}
-
-func setOllamaHost(workspace string) string {
-	serviceName := fmt.Sprintf("%s-ollama", workspace)
-	ollamaPort := int64(11434)
-	ollamaServerURI := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", serviceName, workspace, ollamaPort)
-	return ollamaServerURI
 }

@@ -31,6 +31,18 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+/**
+ * Ensures that a HTTPScaledObject exists for the given AIChatWorkspace instance.
+ *
+ * If the HTTPScaledObject does not exist, it will be created. If an error occurs
+ * while trying to create or retrieve the HTTPScaledObject, the function will return
+ * an error.
+ *
+ * @param ctx The context in which the function is being executed.
+ * @param instance The AIChatWorkspace instance for which to ensure a HTTPScaledObject exists.
+ * @param httpso The desired state of the HTTPScaledObject.
+ * @return A ctrl.Result and an error, or nil if no further reconciliation is needed.
+ */
 func (r *AIChatWorkspaceReconciler) ensureHTTPScaledObject(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, httpso *kedahttpv1alpha1.HTTPScaledObject) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	scheme := runtime.NewScheme()

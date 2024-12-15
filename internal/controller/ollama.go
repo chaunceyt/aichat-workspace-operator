@@ -33,22 +33,30 @@ import (
 )
 
 // ensureStatefulSet ensures the Ollama service is created and running as a StatefulSet.
+/**
+ * This function checks if the given StatefulSet exists in the cluster.
+ * If it does not, it creates a new one with the provided instance and returns nil.
+ * If an error occurs during this process, it logs the error and returns a Result.
+ */
 func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sts *appsv1.StatefulSet) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	found := &appsv1.StatefulSet{}
 
+	// Check if the StatefulSet already exists
 	err := r.Get(context.TODO(), types.NamespacedName{
 		Name:      sts.Name,
 		Namespace: instance.Spec.WorkspaceName,
 	}, found)
-
 	if err != nil && errors.IsNotFound(err) {
+		/**
+		 * If the StatefulSet does not exist, create a new one.
+		 */
 		logger.Info("Creating a new StatefulSet", "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
 
+		// Set the controller reference for the StatefulSet
 		controllerutil.SetControllerReference(instance, sts, r.Scheme)
 		err = r.Create(context.TODO(), sts)
-
 		if err != nil {
 			logger.Error(err, "Failed to create new StatefulSet", "StatefulSet.Namespace", instance.Spec.WorkspaceName, "StatefulSet.Name", sts.Name)
 
@@ -56,8 +64,10 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		}
 
 		return nil, nil
-
 	} else if err != nil {
+		/**
+		 * If an error occurs during the process of checking or creating the StatefulSet, log it and return a Result.
+		 */
 		logger.Error(err, "Failed to get StatefulSet")
 
 		return &ctrl.Result{}, err
@@ -95,6 +105,9 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 	}
 
 	models, err := ollama.ListRunningModels(ollamaServerURI)
+	if err != nil {
+		return &ctrl.Result{}, err
+	}
 	fmt.Println("Models Running: ", models)
 
 	return nil, nil

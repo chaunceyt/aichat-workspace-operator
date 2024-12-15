@@ -35,6 +35,12 @@ type Config struct {
 	OllamaImageTag    string
 }
 
+/**
+ * GetConfig retrieves the configuration from a Kubernetes config map.
+ *
+ * This function fetches the config map and extracts the necessary values to create a new Config object.
+ * It returns the Config object or an error if any of the required values are missing or cannot be retrieved.
+ */
 func GetConfig() (*Config, error) {
 	configMap, err := configMap()
 	if err != nil {
@@ -64,6 +70,13 @@ func GetConfig() (*Config, error) {
 
 }
 
+/**
+ * getConfigMapString retrieves a string value from a Kubernetes config map.
+ *
+ * This function takes a ConfigMap object and a key as input, and returns the corresponding string value.
+ * If the key is not found in the ConfigMap's Data or BinaryData fields, it returns an error indicating that
+ * the required key was not found.
+ */
 func getConfigMapString(configMap *corev1.ConfigMap, key string) (string, error) {
 	if s, ok := configMap.Data[key]; ok {
 		return s, nil
@@ -74,6 +87,12 @@ func getConfigMapString(configMap *corev1.ConfigMap, key string) (string, error)
 	return "", fmt.Errorf("malformed Config Map: required key %q not found", key)
 }
 
+/**
+ * configMap retrieves the configuration map from Kubernetes.
+ *
+ * This function fetches a ConfigMap object with the specified name and namespace,
+ * and returns it or an error if any issues occur during retrieval.
+ */
 func configMap() (*corev1.ConfigMap, error) {
 	ctx := context.Background()
 	restConfig := ctrl.GetConfigOrDie()

@@ -43,6 +43,7 @@ const (
 	OllamaDefaultVolumeSize  = "20Gi"
 
 	// KEDA scaled-to-zero
+	ExternalServiceName      = "openwebui-http-interceptor-proxy"
 	KedaHttpInterceptorProxy = "keda-add-ons-http-interceptor-proxy.keda"
 
 	// ResourceQuota

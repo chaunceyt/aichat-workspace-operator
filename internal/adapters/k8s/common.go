@@ -31,7 +31,13 @@ import (
 	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
-// NewNamespace returns new K8S namespace
+/**
+ * Creates a new Kubernetes Namespace object.
+ *
+ * @param name The name of the namespace to create.
+ * @param appLabels A map of labels to apply to the namespace.
+ * @return A pointer to a new corev1.Namespace object.
+ */
 func NewNamespace(name string, appLabels map[string]string) *corev1.Namespace {
 	return &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
@@ -45,7 +51,14 @@ func NewNamespace(name string, appLabels map[string]string) *corev1.Namespace {
 	}
 }
 
-// NewServiceAccount returns new K8S service account
+/**
+ * Creates a new Kubernetes ServiceAccount object.
+ *
+ * @param name The name of the service account to create.
+ * @param namespace The namespace where the service account will be created.
+ * @param appLabels A map of labels to apply to the service account.
+ * @return A pointer to a new corev1.ServiceAccount object.
+ */
 func NewServiceAccount(name string, namespace string, appLabels map[string]string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -60,6 +73,15 @@ func NewServiceAccount(name string, namespace string, appLabels map[string]strin
 	}
 }
 
+/**
+ * Creates a new Kubernetes PersistentVolumeClaim object.
+ *
+ * @param name The name of the persistent volume claim to create.
+ * @param namespace The namespace where the persistent volume claim will be created.
+ * @param storageSize The size of storage requested for the persistent volume claim (e.g. "1Gi").
+ * @param appLabels A map of labels to apply to the persistent volume claim.
+ * @return A pointer to a new corev1.PersistentVolumeClaim object.
+ */
 func NewPersistentVolumeClaim(name string, namespace string, storageSize string, appLabels map[string]string) *corev1.PersistentVolumeClaim {
 	return &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
@@ -86,6 +108,15 @@ func NewPersistentVolumeClaim(name string, namespace string, storageSize string,
 	}
 }
 
+/**
+ * Creates a new Kubernetes Service object.
+ *
+ * @param namespace The namespace where the service will be created.
+ * @param name The name of the service to create.
+ * @param port The port number that the service will listen on.
+ * @param appLabels A map of labels to apply to the service.
+ * @return A pointer to a new corev1.Service object.
+ */
 func NewService(namespace string, name string, port int32, appLabels map[string]string) *corev1.Service {
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -111,28 +142,14 @@ func NewService(namespace string, name string, port int32, appLabels map[string]
 	}
 }
 
-// need to make scale-to-zero work.
-// the ingress for open-webui and ollama will point to these
-func NewExternalService(namespace string, name, workload string, appLabels map[string]string) *corev1.Service {
-	// TODO: move to const package.
-	proxyName := fmt.Sprintf("%s-%s", namespace, workload)
-	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(proxyName, "proxy"),
-			Namespace: namespace,
-			Labels:    appLabels,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: constants.KedaHttpInterceptorProxy,
-		},
-	}
-}
-
+/**
+ * Creates a new Kubernetes ResourceQuota object.
+ *
+ * @param namespace The namespace where the resource quota will be created.
+ * @param name The name of the resource quota to create.
+ * @param appLabels A map of labels to apply to the resource quota.
+ * @return A pointer to a new corev1.ResourceQuota object.
+ */
 func NewResourceQuota(namespace string, name string, appLabels map[string]string) *corev1.ResourceQuota {
 	return &corev1.ResourceQuota{
 		TypeMeta: metav1.TypeMeta{
@@ -154,6 +171,16 @@ func NewResourceQuota(namespace string, name string, appLabels map[string]string
 	}
 }
 
+/**
+ * Creates a new Kubernetes Ingress object.
+ *
+ * @param workspacename The name of the workspace where the ingress will be created.
+ * @param workload The name of the workload to create an ingress for.
+ * @param backendName The name of the service that the ingress will route traffic to.
+ * @param hostname The hostname that the ingress will listen on (e.g. example.com).
+ * @param backendPort The port number that the service is listening on.
+ * @return A pointer to a new networkingv1.Ingress object.
+ */
 func NewIngress(workspacename, workload, backendName, hostname string, backendPort int32) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypePrefix
 	return &networkingv1.Ingress{
@@ -197,6 +224,44 @@ func NewIngress(workspacename, workload, backendName, hostname string, backendPo
 	}
 }
 
+/**
+ * Creates a new Kubernetes Service object of type ExternalName.
+ *
+ * @param namespace The namespace where the service will be created.
+ * @param appLabels A map of labels to apply to the service.
+ * @return A pointer to a new corev1.Service object of type ExternalName.
+ *
+ * needed to make scale-to-zero work.
+ * the ingress for open-webui and ollama will point to these
+ */
+func NewExternalService(namespace string, appLabels map[string]string) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.ExternalServiceName,
+			Namespace: namespace,
+			Labels:    appLabels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:         corev1.ServiceTypeExternalName,
+			ExternalName: constants.KedaHttpInterceptorProxy,
+		},
+	}
+}
+
+/**
+ * Creates a new Kubernetes HTTP Scaled Object.
+ *
+ * @param workspacename The name of the workspace where the scaled object will be created.
+ * @param kind The kind of the workload to scale (e.g. "Deployment", "StatefulSet").
+ * @param workload The name of the workload to create an HTTP scaled object for.
+ * @param port The port number that the service is listening on.
+ * @param hosts A list of hostnames that the scaled object will listen on.
+ * @return A pointer to a new kedahttpv1alpha1.HTTPScaledObject object.
+ */
 func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string) *kedahttpv1alpha1.HTTPScaledObject {
 	return &kedahttpv1alpha1.HTTPScaledObject{
 		TypeMeta: metav1.TypeMeta{
