@@ -29,6 +29,11 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+// ensurePVC ensures that a Persistent Volume Claim (PVC) exists for the given AIChatWorkspace instance.
+//
+// It checks if the PVC already exists in the specified namespace. If it does not exist, it creates a new PVC and sets
+// the controller reference to the AIChatWorkspace instance. If an error occurs during this process, it logs the error
+// and returns it.
 func (r *AIChatWorkspaceReconciler) ensurePVC(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, pvc *corev1.PersistentVolumeClaim) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

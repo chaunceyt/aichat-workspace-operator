@@ -3,5 +3,6 @@ kind: ConfigMap
 metadata:
   name: "config"
 data:
+  defaultDomain: "localtest.me"
   openwebUIImageTag: "main"
   ollamaImageTag: "0.4.1"

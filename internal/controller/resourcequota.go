@@ -29,6 +29,17 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+/**
+ * Ensures a resource quota exists for the given AIChatWorkspace instance.
+ *
+ * If the resource quota does not exist, it will be created. If it already exists,
+ * this function will do nothing.
+ *
+ * @param ctx The context in which to perform the operation.
+ * @param instance The AIChatWorkspace instance for which to ensure a resource quota.
+ * @param rq The desired resource quota to create or check.
+ * @return A ctrl.Result indicating whether the reconciliation was successful, and an error if one occurred.
+ */
 func (r *AIChatWorkspaceReconciler) ensureResourceQuota(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, rq *corev1.ResourceQuota) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

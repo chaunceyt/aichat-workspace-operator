@@ -29,6 +29,10 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+// ensureNamespace ensures that a namespace exists for the given AIChatWorkspace instance.
+//
+// It checks if the namespace already exists, and if not, creates it. If an error occurs during this process,
+// it logs the error and returns it.
 func (r *AIChatWorkspaceReconciler) ensureNamespace(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, ns *corev1.Namespace) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

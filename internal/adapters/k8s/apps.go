@@ -29,17 +29,19 @@ import (
 )
 
 const (
-	defaultNameLabel            = "app.kubernetes.io/name"
-	defaultInstanceLabel        = "app.kubernetes.io/instance"
-	openwebuiVolumeMountName    = "webui-volume"
-	openwebuiContainerName      = "open-webui"
-	openwebuiContainerImageName = "ghcr.io/open-webui/open-webui"
-	ollamaVolumeMountName       = "ollama-volume"
-	ollamaContainerName         = "ollama"
-	ollamaContainerImageName    = "ollama/ollama"
+	defaultNameLabel     = "app.kubernetes.io/name"
+	defaultInstanceLabel = "app.kubernetes.io/instance"
 )
 
-// NewDeployment is responsible for creating the Open WebUI workload.
+/**
+ * Creates a new deployment of the Open WebUI workload in Kubernetes.
+ *
+ * @param namespace The namespace where the deployment will be created.
+ * @param name      The name of the deployment.
+ * @param port      The port that the Open WebUI container will listen on.
+ * @param openwebuiContainerImageTag The tag for the Open WebUI container image to use.
+ * @return A pointer to a new appsv1.Deployment object representing the Open WebUI workload.
+ */
 func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTag string) *appsv1.Deployment {
 	appLabels := map[string]string{defaultNameLabel: name}
 
@@ -105,7 +107,7 @@ func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTa
 					},
 					Volumes: []v1.Volume{
 						{
-							Name: openwebuiVolumeMountName,
+							Name: constants.OpenwebuiVolumeMountName,
 							VolumeSource: v1.VolumeSource{
 								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 									ClaimName: name,
@@ -120,7 +122,21 @@ func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTa
 	}
 }
 
-// NewStatefulSet is responsible for creating the Ollama workload.
+/*
+NewStatefulSet creates a Kubernetes StatefulSet object that represents the
+Ollama workload. The StatefulSet ensures that a specified number of replicas
+of the Ollama container are running at any given time.
+
+The function takes in several parameters:
+  - namespace: the Kubernetes namespace where the StatefulSet will be created
+  - name: the name of the StatefulSet
+  - port: the port number that the Ollama container will listen on
+  - volumeSize: the size of the persistent volume claim (PVC) that will be created
+    for the Ollama container
+  - ollamaContainerImageTag: the tag of the Ollama container image to use
+
+The function returns a pointer to an appsv1.StatefulSet object.
+*/
 func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollamaContainerImageTag string) *appsv1.StatefulSet {
 	appLabels := map[string]string{defaultNameLabel: name}
 
@@ -140,7 +156,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 			VolumeClaimTemplates: []v1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ollamaVolumeMountName,
+						Name:      constants.OllamaVolumeMountName,
 						Namespace: namespace,
 					},
 					Spec: v1.PersistentVolumeClaimSpec{
@@ -175,7 +191,7 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 							TTY:             true,
 							VolumeMounts: []v1.VolumeMount{
 								{
-									Name:      ollamaVolumeMountName,
+									Name:      constants.OllamaVolumeMountName,
 									MountPath: "/.ollama",
 								},
 							},
@@ -187,7 +203,17 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 	}
 }
 
-// defaultSecurityContext - sets the security context for each container
+/**
+ * defaultSecurityContext returns a v1.SecurityContext object with settings to secure containers.
+ *
+ * The returned SecurityContext has the following properties:
+ *   - AllowPrivilegeEscalation: set to false, preventing privilege escalation attacks
+ *   - Capabilities: drops all capabilities, reducing potential attack surface
+ *   - Privileged: set to false, preventing the container from running as privileged
+ *   - ReadOnlyRootFilesystem: set to true, making the root filesystem read-only
+ *   - RunAsNonRoot: set to true, ensuring the container runs as a non-root user
+ *   - SeccompProfile: sets the seccomp profile type to RuntimeDefault, providing additional security
+ */
 func defaultSecurityContext() *v1.SecurityContext {
 	return &v1.SecurityContext{
 		AllowPrivilegeEscalation: ptr.To[bool](false),
@@ -205,7 +231,13 @@ func defaultSecurityContext() *v1.SecurityContext {
 	}
 }
 
-// defaultPodSecurityContext - sets the pod's security context
+/**
+ * defaultPodSecurityContext returns a v1.PodSecurityContext object with settings to secure pods.
+ *
+ * The returned PodSecurityContext has the following properties:
+ *   - FSGroup: set to 10001, ensuring that the pod runs with a specific file system group ID
+ *   - RunAsUser and RunAsGroup: both set to 10001, ensuring that the pod runs as a non-root user and group
+ */
 func defaultPodSecurityContext() *v1.PodSecurityContext {
 	return &v1.PodSecurityContext{
 		FSGroup:    ptr.To[int64](10001),

@@ -12,7 +12,7 @@ spec:
     listKind: AIChatWorkspaceList
     plural: aichatworkspaces
     singular: aichatworkspace
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

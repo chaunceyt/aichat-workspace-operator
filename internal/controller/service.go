@@ -29,6 +29,9 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+// ensureService ensures that the specified Service exists in the cluster.
+// If it does not exist, it creates a new one. If an error occurs during this process,
+// it returns the error and logs it.
 func (r *AIChatWorkspaceReconciler) ensureService(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, svc *corev1.Service) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

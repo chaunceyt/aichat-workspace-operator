@@ -2,7 +2,7 @@
 
 Here I will explain the design philosophy that I am applying to the AIChat Workspace Operator and API to govern how I would extend and maintain this application. Initially, I focused on making things work and then focus on cleaning up.
 
-Not being an expert, this is an evolutionary architecture design and will evolve over time as new requirements, tech debt, and new technologies emerge.
+Not being an expert, this is an evolutionary architecture design and will evolve over time as new requirements, tech debt, and new technologies emerge. Also, as I'm reading Domain-Driven Design with Golang, I'm hoping to implement that pattern and ensure the operator works with each version of Golang and Kubernetes.
 
 # Directory Structure
 

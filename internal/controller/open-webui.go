@@ -29,6 +29,17 @@ import (
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
+/**
+ * Ensures the existence and desired state of a Deployment.
+ *
+ * This function checks if a Deployment with the given name exists in the specified namespace. If it does not exist, it creates a new Deployment.
+ * If the Deployment already exists, this function checks for any changes to the Deployment's spec and updates it if necessary.
+ *
+ * @param ctx The context in which the function is being executed.
+ * @param instance The AIChatWorkspace instance that owns the Deployment.
+ * @param deploy The desired state of the Deployment.
+ * @return A Result object indicating whether the function should be retried, or an error if one occurred.
+ */
 func (r *AIChatWorkspaceReconciler) ensureDeployment(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, deploy *appsv1.Deployment) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 

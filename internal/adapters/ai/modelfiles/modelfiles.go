@@ -18,10 +18,23 @@ package modelfiles
 
 import "fmt"
 
+// GetSystemPromptPattern returns a system prompt pattern based on the provided model and pattern.
+// It calls the internal prompt function to generate the pattern.
 func GetSystemPromptPattern(model, pattern string) string {
 	return prompt(model, pattern)
 }
 
+// prompt generates a system prompt template with default parameters for temperature, top_p, top_k, and seed.
+// The model and pattern are used as placeholders in the generated template.
+//
+// Args:
+//
+//	model (string): The name of the model to be used in the prompt template.
+//	pattern (string): The pattern to be included in the system prompt template.
+//
+// Returns:
+//
+//	string: A formatted string representing the system prompt template with default parameters and the provided model and pattern.
 func prompt(model, pattern string) string {
 	var promptTemplate = `
 FROM %s
