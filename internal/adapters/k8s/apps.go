@@ -96,7 +96,17 @@ func NewDeployment(namespace, name string, port int32, openwebuiContainerImageTa
 								},
 							},
 							Ports: []v1.ContainerPort{{ContainerPort: port}},
-							TTY:   true,
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									v1.ResourceCPU:    resource.MustParse("1000m"),
+									v1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+								Requests: v1.ResourceList{
+									v1.ResourceCPU:    resource.MustParse("500m"),
+									v1.ResourceMemory: resource.MustParse("500Mi"),
+								},
+							},
+							TTY: true,
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      constants.OpenwebuiVolumeMountName,
@@ -188,7 +198,17 @@ func NewStatefulSet(namespace, name string, port int32, volumeSize string, ollam
 							},
 							SecurityContext: defaultSecurityContext(),
 							Ports:           []v1.ContainerPort{{ContainerPort: port}},
-							TTY:             true,
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									v1.ResourceCPU:    resource.MustParse("4000m"),
+									v1.ResourceMemory: resource.MustParse("4Gi"),
+								},
+								Requests: v1.ResourceList{
+									v1.ResourceCPU:    resource.MustParse("2000m"),
+									v1.ResourceMemory: resource.MustParse("2Gi"),
+								},
+							},
+							TTY: true,
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      constants.OllamaVolumeMountName,

@@ -17,6 +17,7 @@ limitations under the License.
 package k8s
 
 import (
+	"bytes"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/utils/ptr"
 
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -293,6 +298,48 @@ func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string)
 			},
 		},
 	}
+}
+
+// https://discuss.kubernetes.io/t/go-client-exec-ing-a-shel-command-in-pod/5354/4
+func ExecuteRemoteCommand(pod *corev1.Pod, command string) (string, string, error) {
+	kubeCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{},
+	)
+	restCfg, err := kubeCfg.ClientConfig()
+	if err != nil {
+		return "", "", err
+	}
+	coreClient, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return "", "", err
+	}
+
+	buf := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	request := coreClient.CoreV1().RESTClient().
+		Post().
+		Namespace(pod.Namespace).
+		Resource("pods").
+		Name(pod.Name).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Command: []string{"/bin/sh", "-c", command},
+			Stdin:   false,
+			Stdout:  true,
+			Stderr:  true,
+			TTY:     true,
+		}, scheme.ParameterCodec)
+	exec, err := remotecommand.NewSPDYExecutor(restCfg, "POST", request.URL())
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: buf,
+		Stderr: errBuf,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("%w Failed executing command %s on %v/%v", err, command, pod.Namespace, pod.Name)
+	}
+
+	return buf.String(), errBuf.String(), nil
 }
 
 func getName(workspace, workload string) string {

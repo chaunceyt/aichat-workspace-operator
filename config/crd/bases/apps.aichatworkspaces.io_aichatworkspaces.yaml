@@ -124,7 +124,18 @@ spec:
                   type: object
                 type: array
               isCreated:
+                description: Used to make decision during the reconcile.
                 type: boolean
+              models:
+                description: Which model is currently loaded
+                items:
+                  type: string
+                type: array
+              ollamaWorkload:
+                description: PodInfo name, cpu and memory usage and diskusage
+                type: string
+              openwebuiWorkload:
+                type: string
             type: object
         type: object
     served: true

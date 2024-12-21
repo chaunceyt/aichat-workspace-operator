@@ -74,7 +74,7 @@ var (
 // +kubebuilder:rbac:groups=apps.aichatworkspaces.io,resources=aichatworkspaces/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=*
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
-// +kubebuilder:rbac:groups="",resources=namespaces;pods;services;persistentvolumeclaims;serviceaccounts;resourcequotas,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces;pods;pods/exec;services;persistentvolumeclaims;serviceaccounts;resourcequotas,verbs=*
 // +kubebuilder:rbac:groups="",resources=events,verbs=create
 // +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;watch;list
 // +kubebuilder:rbac:groups="http.keda.sh",resources=httpscaledobjects,verbs=*
