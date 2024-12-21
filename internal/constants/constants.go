@@ -37,6 +37,7 @@ const (
 	// Ollama
 	OllamaName               = "ollama"
 	OllamaVolumeMountName    = "ollama-volume"
+	OllamaVolumeMountPath    = "/.ollama"
 	OllamaContainerName      = "ollama"
 	OllamaContainerImageName = "ollama/ollama"
 	OllamaPort               = int32(11434)

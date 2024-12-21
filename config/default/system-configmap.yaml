@@ -5,4 +5,4 @@ metadata:
 data:
   defaultDomain: "localtest.me"
   openwebUIImageTag: "main"
-  ollamaImageTag: "0.4.1"
+  ollamaImageTag: "0.5.4"

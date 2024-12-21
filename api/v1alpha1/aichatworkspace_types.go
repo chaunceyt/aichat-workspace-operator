@@ -40,7 +40,15 @@ type AIChatWorkspaceSpec struct {
 
 // AIChatWorkspaceStatus defines the observed state of AIChatWorkspace.
 type AIChatWorkspaceStatus struct {
+	// Used to make decision during the reconcile.
 	IsCreated bool `json:"isCreated,omitempty"`
+
+	// PodInfo name, cpu and memory usage and diskusage
+	OllamaWorkload    string `json:"ollamaWorkload,omitempty"`
+	OpenWebUIWorkload string `json:"openwebuiWorkload,omitempty"`
+
+	// Which model is currently loaded
+	ModelsInUse []string `json:"models,omitempty"`
 
 	// Represents the observations of a AIChatWorkspace's current state.
 	// AIChatWorkspace.status.conditions.type are: "Available", "Progressing", and "Degraded"
