@@ -34,6 +34,12 @@ const (
 	OpenwebuiContainerPort     = int32(8080)
 	OpenwebuiDefaultVolumeSize = "2Gi"
 
+	// OpenWebUI Request / Limits
+	OpenWebUIRequestCPUMin    = "500m"
+	OpenWebUIRequestMemoryMin = "500Mi"
+	OpenWebUILimitsCPUMax     = "1000m"
+	OpenWebUILimitsMemoryMax  = "1Gi"
+
 	// Ollama
 	OllamaName               = "ollama"
 	OllamaVolumeMountName    = "ollama-volume"
@@ -43,15 +49,21 @@ const (
 	OllamaPort               = int32(11434)
 	OllamaDefaultVolumeSize  = "20Gi"
 
+	// Ollama Request / Limits
+	OllamaRequestCPUMin    = "500m"
+	OllamaRequestMemoryMin = "500Mi"
+	OllamaLimitsCPUMax     = "1000m"
+	OllamaLimitsMemoryMax  = "4Gi"
+
 	// KEDA scaled-to-zero
 	ExternalServiceName      = "openwebui-http-interceptor-proxy"
 	KedaHttpInterceptorProxy = "keda-add-ons-http-interceptor-proxy.keda"
 
 	// ResourceQuota
 	ResourceQuotaName         = "rquota"
-	MaxPods                   = "2"
-	MaxPersistentVolumeClaims = "2"
-	MaxService                = "5"
+	MaxPods                   = "4"
+	MaxPersistentVolumeClaims = "3"
+	MaxService                = "6"
 
 	// Label Names
 	ServiceLabelName        = "svc"

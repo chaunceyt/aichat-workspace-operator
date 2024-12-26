@@ -51,13 +51,22 @@ func (r *AIChatWorkspaceReconciler) ensureServiceAccount(ctx context.Context, in
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		logger.Info("Creating a ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+		logger.Info(
+			"Creating ServiceAccount",
+			"Name", sa.Name,
+			"Workspace", instance.Spec.WorkspaceName,
+		)
 
 		controllerutil.SetControllerReference(instance, sa, r.Scheme)
 		err = r.Create(context.TODO(), sa)
 
 		if err != nil {
-			logger.Error(err, "Failed to create ServiceAccount", "ServiceAccount.Namespace", instance.Spec.WorkspaceName, "ServiceAccount.Name", sa.Name)
+			logger.Error(
+				err,
+				"Creating ServiceAccount",
+				"Name", sa.Name,
+				"Workspace", instance.Spec.WorkspaceName,
+			)
 
 			return &ctrl.Result{}, err
 		}

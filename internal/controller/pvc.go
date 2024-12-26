@@ -45,12 +45,22 @@ func (r *AIChatWorkspaceReconciler) ensurePVC(ctx context.Context, instance *app
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		logger.Info("Creating a new PVC", "PVC.Namespace", instance.Spec.WorkspaceName, "PVC.Name", pvc.Name)
+		logger.Info(
+			"Creating PVC",
+			"Name", pvc.Name,
+			"Workspace", instance.Spec.WorkspaceName,
+		)
+
 		controllerutil.SetControllerReference(instance, pvc, r.Scheme)
 		err = r.Create(context.TODO(), pvc)
 
 		if err != nil {
-			logger.Error(err, "Failed to create new PVC", "PVC.Namespace", instance.Spec.WorkspaceName, "PVC.Name", pvc.Name)
+			logger.Error(
+				err,
+				"Creating PVC",
+				"Name", pvc.Name,
+				"Workspace", instance.Spec.WorkspaceName,
+			)
 			return &ctrl.Result{}, err
 		}
 

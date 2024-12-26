@@ -39,6 +39,11 @@ spec:
           spec:
             description: AIChatWorkspaceSpec defines the desired state of AIChatWorkspace.
             properties:
+              embeddings:
+                description: List of default embedding models
+                items:
+                  type: string
+                type: array
               models:
                 description: List of default models for this workspace.
                 items:

@@ -7,12 +7,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resources:
+  - configmaps
   - namespaces
   - persistentvolumeclaims
   - pods
@@ -22,6 +17,12 @@ rules:
   - services
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
 - apiGroups:
   - apps
   resources:

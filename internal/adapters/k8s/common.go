@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -300,8 +301,24 @@ func NewHttpSo(workspacename, kind, workload string, port int32, hosts []string)
 	}
 }
 
+func NewInitConfigMap(workspacename string) *corev1.ConfigMap {
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      getName(workspacename, "initsql"),
+			Namespace: workspacename,
+		},
+		Data: map[string]string{
+			"init.sql": initSQL(),
+		},
+	}
+
+	return cm
+}
+
 // https://discuss.kubernetes.io/t/go-client-exec-ing-a-shel-command-in-pod/5354/4
 func ExecuteRemoteCommand(pod *corev1.Pod, command string) (string, string, error) {
+	ctx := context.Background()
 	kubeCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{},
@@ -331,7 +348,11 @@ func ExecuteRemoteCommand(pod *corev1.Pod, command string) (string, string, erro
 			TTY:     true,
 		}, scheme.ParameterCodec)
 	exec, err := remotecommand.NewSPDYExecutor(restCfg, "POST", request.URL())
-	err = exec.Stream(remotecommand.StreamOptions{
+	if err != nil {
+		return "", "", err
+	}
+
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdout: buf,
 		Stderr: errBuf,
 	})
@@ -345,4 +366,28 @@ func ExecuteRemoteCommand(pod *corev1.Pod, command string) (string, string, erro
 func getName(workspace, workload string) string {
 	name := fmt.Sprintf("%s-%s", workspace, workload)
 	return name
+}
+
+// TODO: create secrets in the workspaces to store the passwords
+func initSQL() string {
+	sql := `
+-- installing pgai or pgvectorscale will also install pgvector
+CREATE EXTENSION IF NOT EXISTS ai CASCADE;
+CREATE EXTENSION IF NOT EXISTS vectorscale CASCADE;
+
+-- Create databases for each service
+CREATE DATABASE n8n;
+CREATE DATABASE openwebui;
+
+-- Create DB_USER
+CREATE USER n8n WITH PASSWORD 'n8NSup3rS3cret';
+GRANT ALL PRIVILEGES ON DATABASE n8n TO n8n;
+GRANT ALL ON SCHEMA public TO n8n;
+
+CREATE USER openwebui WITH PASSWORD 'openwebUISup3rS3cret';
+GRANT ALL PRIVILEGES ON DATABASE openwebui TO openwebui;
+GRANT ALL ON SCHEMA public TO openwebui;
+`
+
+	return sql
 }

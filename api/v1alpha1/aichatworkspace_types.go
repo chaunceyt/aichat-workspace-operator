@@ -33,6 +33,9 @@ type AIChatWorkspaceSpec struct {
 	// List of default models for this workspace.
 	Models []string `json:"models"`
 
+	// List of default embedding models
+	Embeddings []string `json:"embeddings,omitempty"`
+
 	// List of patterns
 	// https://github.com/danielmiessler/fabric/tree/main/patterns
 	Patterns []string `json:"patterns,omitempty"`

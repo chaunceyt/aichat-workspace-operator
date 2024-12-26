@@ -42,13 +42,12 @@ import (
 	"github.com/chaunceyt/aichat-workspace-operator/internal/constants"
 )
 
-// ensureStatefulSet ensures the Ollama service is created and running as a StatefulSet.
 /**
  * This function checks if the given StatefulSet exists in the cluster.
  * If it does not, it creates a new one with the provided instance and returns nil.
  * If an error occurs during this process, it logs the error and returns a Result.
  */
-func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sts *appsv1.StatefulSet) (*ctrl.Result, error) {
+func (r *AIChatWorkspaceReconciler) ensureOllama(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, sts *appsv1.StatefulSet) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	found := &appsv1.StatefulSet{}
@@ -62,7 +61,7 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		/**
 		 * If the StatefulSet does not exist, create a new one.
 		 */
-		logger.Info("Creating a StatefulSet", "Name", sts.Name, "WorkspaceName", instance.Spec.WorkspaceName)
+		logger.Info("Creating a Ollama StatefulSet", "Name", sts.Name, "WorkspaceName", instance.Spec.WorkspaceName)
 
 		// Set the controller reference for the StatefulSet
 		controllerutil.SetControllerReference(instance, sts, r.Scheme)
@@ -131,6 +130,33 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		}
 	}
 
+	for _, embeddingModel := range instance.Spec.Embeddings {
+		ok, err := ollama.DoesModelExist(embeddingModel, ollamaServerURI)
+		if err != nil {
+			logger.Error(
+				err,
+				"Checking to see Model exists.",
+				"Model Name", embeddingModel,
+				"Workspace Name", instance.Spec.WorkspaceName,
+			)
+			return &ctrl.Result{}, err
+		}
+		if !ok {
+			fmt.Printf("The %s LLM does not exist. Starting the ollama pull ...\n", embeddingModel)
+			err = ollama.PullModel(embeddingModel, ollamaServerURI)
+			if err != nil {
+				logger.Error(
+					err,
+					"Pulling down model",
+					"ModelName", embeddingModel,
+					"WorkspaceName", instance.Spec.WorkspaceName,
+					"Name", sts.Name,
+				)
+				return &ctrl.Result{}, err
+			}
+		}
+	}
+
 	models, err := ollama.ListRunningModels(ollamaServerURI)
 	if err != nil {
 		return &ctrl.Result{}, err
@@ -141,19 +167,13 @@ func (r *AIChatWorkspaceReconciler) ensureStatefulSet(ctx context.Context, insta
 		return &ctrl.Result{}, err
 	}
 
-	openwebuiWorkloadInfo, err := r.getPodInfo(ctx, instance, "openwebui")
-	if err != nil {
-		return &ctrl.Result{}, err
-	}
-
 	instance.Status.OllamaWorkload = ollamaWorkloadInfo
-	instance.Status.OpenWebUIWorkload = openwebuiWorkloadInfo
 	instance.Status.ModelsInUse = models
 	err = r.Status().Update(context.TODO(), instance)
 	if err != nil {
 		logger.Error(
 			err,
-			"Updating Status for OllamaPod",
+			"Updating Status for Ollama Workload",
 			"WorkspaceName", instance.Spec.WorkspaceName,
 		)
 		return &ctrl.Result{}, err
@@ -185,6 +205,15 @@ func (r *AIChatWorkspaceReconciler) isOllamaUp(ctx context.Context, instance *ap
 	return false
 }
 
+/**
+ * Returns information about a specific pod in the given Workspace.
+ *
+ * @param ctx The context of the request.
+ * @param instance The AIChatWorkspace instance to get the pod info from.
+ * @param workload The name of the workload (e.g., "ollama" or "openwebui").
+ *
+ * @return A string containing information about the pod, including its name, container, storage usage, CPU and memory usage.
+ */
 func (r *AIChatWorkspaceReconciler) getPodInfo(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, workload string) (string, error) {
 	logger := log.FromContext(ctx)
 	var err error
@@ -210,6 +239,8 @@ func (r *AIChatWorkspaceReconciler) getPodInfo(ctx context.Context, instance *ap
 	var duCommand string
 	var mountPath string
 	var defaultStorage string
+	var nodeName string
+	var restartCount int32
 
 	switch workload {
 	case "ollama":
@@ -224,6 +255,8 @@ func (r *AIChatWorkspaceReconciler) getPodInfo(ctx context.Context, instance *ap
 
 	for _, pod := range podList.Items {
 		podName = pod.Name
+		nodeName = pod.Spec.NodeName
+		restartCount = pod.Status.ContainerStatuses[0].RestartCount
 		duResults, _, err := k8s.ExecuteRemoteCommand(&pod, duCommand)
 		if err != nil {
 			return podInfo, err
@@ -276,7 +309,7 @@ func (r *AIChatWorkspaceReconciler) getPodInfo(ctx context.Context, instance *ap
 	}
 
 	// PodInfo that will be available when describing a aichatworkspace
-	podInfo = fmt.Sprintf("Name: %s\n\tContainer: %s\n\tStorage: %s \n\tCPU (millicores): %sm\n\tMemory (bytes): %sMi", podName, containerName, diskusage, strconv.FormatInt(cpu, 10), strconv.FormatInt(memory, 10))
+	podInfo = fmt.Sprintf("Name: %s\n\tNodeName: %s\n\tContainer: %s\n\tRestartCount: %d\n\tStorage: %s \n\tCPU (millicores): %sm\n\tMemory (bytes): %sMi", podName, nodeName, containerName, restartCount, diskusage, strconv.FormatInt(cpu, 10), strconv.FormatInt(memory, 10))
 
 	return podInfo, nil
 }

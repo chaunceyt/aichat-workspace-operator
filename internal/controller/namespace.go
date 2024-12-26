@@ -48,7 +48,11 @@ func (r *AIChatWorkspaceReconciler) ensureNamespace(ctx context.Context, instanc
 		controllerutil.SetControllerReference(instance, ns, r.Scheme)
 		err = r.Create(context.TODO(), ns)
 		if err != nil {
-			logger.Error(err, "Failed to create namespace", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
+			logger.Error(
+				err,
+				"Creating namespace",
+				"WorkspaceName", instance.Spec.WorkspaceName,
+			)
 			return &ctrl.Result{}, err
 		}
 
