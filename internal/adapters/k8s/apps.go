@@ -129,7 +129,6 @@ func NewOpenWebUI(namespace, name string, port int32, openwebuiContainerImageTag
 							Ports: []v1.ContainerPort{{ContainerPort: port}},
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									// v1.ResourceCPU:    resource.MustParse(constants.OpenWebUILimitsCPUMax),
 									v1.ResourceMemory: resource.MustParse(constants.OpenWebUILimitsMemoryMax),
 								},
 								Requests: v1.ResourceList{
@@ -261,7 +260,6 @@ func NewPostgres(namespace, name string, port int32, postgresContainerImageTag s
 							}},
 							// Resources: v1.ResourceRequirements{
 							// 	Limits: v1.ResourceList{
-							// 		// v1.ResourceCPU:    resource.MustParse(constants.OllamaLimitsCPUMax),
 							// 		v1.ResourceMemory: resource.MustParse(constants.OllamaLimitsMemoryMax),
 							// 	},
 							// 	Requests: v1.ResourceList{
@@ -370,6 +368,14 @@ func NewOllama(namespace, name string, port int32, volumeSize string, ollamaCont
 									Value: "1",
 								},
 								{
+									Name:  "OLLAMA_FLASH_ATTENTION",
+									Value: "1",
+								},
+								{
+									Name:  "OLLAMA_KV_CACHE_TYPE",
+									Value: "f16",
+								},
+								{
 									Name: "POD_NAME",
 									ValueFrom: &v1.EnvVarSource{
 										FieldRef: &v1.ObjectFieldSelector{
@@ -398,7 +404,6 @@ func NewOllama(namespace, name string, port int32, volumeSize string, ollamaCont
 							Ports:           []v1.ContainerPort{{ContainerPort: port}},
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									// v1.ResourceCPU:    resource.MustParse(constants.OllamaLimitsCPUMax),
 									v1.ResourceMemory: resource.MustParse(constants.OllamaLimitsMemoryMax),
 								},
 								Requests: v1.ResourceList{

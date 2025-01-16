@@ -9,12 +9,21 @@ metadata:
 spec:
   workspaceName: team-a-aichat
   workspaceENV: dev
+
+  n8n: false
+  openwebui: true
+  openwebuiPipelines: false
+  postgres: false
+  qdrant: false
+
   models:
     - gemma2:2b
     - llama3.2:3b
+
   embeddings:
     - nomic-embed-text:latest
     - granite-embedding:latest
+
   patterns:
     - explain_code
     - create_summary
