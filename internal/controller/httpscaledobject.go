@@ -60,14 +60,24 @@ func (r *AIChatWorkspaceReconciler) ensureHTTPScaledObject(ctx context.Context, 
 		err = r.Create(context.TODO(), httpso)
 
 		if err != nil {
-			logger.Error(err, "Failed to createHTTPScaledObject", "HTTPScaledObject.Namespace", instance.Spec.WorkspaceName, "HTTPScaledObject.Name", httpso.Name)
+			logger.Error(
+				err,
+				"Creating HTTPScaledObject",
+				"Name", httpso.Name,
+				"Workspace", instance.Spec.WorkspaceName,
+			)
 			return &ctrl.Result{}, err
 		}
 
 		return nil, nil
 
 	} else if err != nil {
-		logger.Error(err, "Failed to get HTTPScaledObject")
+		logger.Error(
+			err,
+			"Getting HTTPScaledObject",
+			"Name", httpso.Name,
+			"Workspace", instance.Spec.WorkspaceName,
+		)
 
 		return &ctrl.Result{}, err
 	}

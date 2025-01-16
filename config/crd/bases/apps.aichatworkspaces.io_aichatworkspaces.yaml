@@ -39,11 +39,35 @@ spec:
           spec:
             description: AIChatWorkspaceSpec defines the desired state of AIChatWorkspace.
             properties:
+              embeddings:
+                description: List of default embedding models
+                items:
+                  type: string
+                type: array
+              flowise:
+                description: |-
+                  Flowise another No/low code AI agent builder that pairs very well with n8n
+                  https://flowiseai.com/
+                type: boolean
               models:
                 description: List of default models for this workspace.
                 items:
                   type: string
                 type: array
+              n8n:
+                description: N8N is a low-code platform with over 400 integrations
+                  and AI components
+                type: boolean
+              openwebui:
+                description: |-
+                  OpenwebUI
+                  https://openwebui.com/
+                type: boolean
+              openwebuiPipelines:
+                description: |-
+                  Openwebui Pipelines
+                  Modular, customizable workflows for any UI client supporting OpenAI API specs
+                type: boolean
               patterns:
                 description: |-
                   List of patterns
@@ -51,6 +75,16 @@ spec:
                 items:
                   type: string
                 type: array
+              postgres:
+                description: |-
+                  timescale postgres with pgai support
+                  https://docs.timescale.com/
+                type: boolean
+              qdrant:
+                description: |-
+                  Qdrant an open-source, high performance vector store with an comprehensive API
+                  https://qdrant.tech/
+                type: boolean
               workspaceENV:
                 type: string
               workspaceName:

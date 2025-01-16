@@ -303,7 +303,7 @@ func CreateFromModelFile(modelName, defaultBaseURL string, patterns []string) (b
 
 	for _, pattern := range patterns {
 		createModelName := fmt.Sprintf("%s-%s", modelName, pattern)
-		modelfile := modelfiles.GetSystemPromptPattern(modelName, pattern)
+		modelfile := modelfiles.GetSystemPromptPattern(modelName, pattern, "stable")
 		fmt.Printf("Creating %s from %s pattern modelfile\n", createModelName, pattern)
 		err = client.Create(ctx, &ollama.CreateRequest{
 			Model:     createModelName,

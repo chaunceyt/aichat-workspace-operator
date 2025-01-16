@@ -20,11 +20,11 @@ import "fmt"
 
 // GetSystemPromptPattern returns a system prompt pattern based on the provided model and pattern.
 // It calls the internal prompt function to generate the pattern.
-func GetSystemPromptPattern(model, pattern string) string {
-	return prompt(model, pattern)
+func GetSystemPromptPattern(model, pattern string, preference string) string {
+	return prompt(model, pattern, preference)
 }
 
-// prompt generates a system prompt template with default parameters for temperature, top_p, top_k, and seed.
+// prompt generates a system prompt template with default parameters for temperature, top_p, and seed.
 // The model and pattern are used as placeholders in the generated template.
 //
 // Args:
@@ -35,18 +35,54 @@ func GetSystemPromptPattern(model, pattern string) string {
 // Returns:
 //
 //	string: A formatted string representing the system prompt template with default parameters and the provided model and pattern.
-func prompt(model, pattern string) string {
-	var promptTemplate = `
+//
+// Ref: https://github.com/ollama/ollama/blob/main/docs/modelfile.md#parameter
+func prompt(model, pattern string, preference string) string {
+	var promptTemplate string
+
+	var stableTemplate = `
 FROM %s
 	
 PARAMETER temperature 0.1
-PARAMETER top_p 0.5
-PARAMETER top_k 40
-PARAMETER seed 1
+PARAMETER top_p 0.25
+PARAMETER seed 42
+
+SYSTEM """
+%s"""
+		`
+
+	var balancedTemplate = `
+FROM %s
+
+PARAMETER temperature 0.5
+PARAMETER top_p 0.4
+PARAMETER seed 21
 	
 SYSTEM """
 %s"""	
 		`
+
+	var creativeTemplate = `
+FROM %s
+
+PARAMETER temperature 0.9
+PARAMETER top_p 0.7
+PARAMETER seed 0
+
+SYSTEM """
+%s"""
+		`
+
+	switch preference {
+	case "stable":
+		promptTemplate = stableTemplate
+	case "balanced":
+		promptTemplate = balancedTemplate
+	case "creative":
+		promptTemplate = creativeTemplate
+	default:
+		promptTemplate = stableTemplate
+	}
 
 	return fmt.Sprintf(promptTemplate, model, pattern)
 }

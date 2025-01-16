@@ -19,52 +19,50 @@ package controller
 import (
 	"context"
 
-	networkingv1 "k8s.io/api/networking/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	appsv1alpha1 "github.com/chaunceyt/aichat-workspace-operator/api/v1alpha1"
 )
 
-// ensureIngress ensures that the specified ingress resource exists in the cluster.
-// If it does not exist, it will be created. If an error occurs during this process,
-// it will be logged and returned.
-func (r *AIChatWorkspaceReconciler) ensureIngress(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, ing *networkingv1.Ingress) (*reconcile.Result, error) {
+// ensureInitConfigMap ensures that a configmap exists containing the init sql for Postgres Database.
+//
+// It checks if the configmap already exists, and if not, creates it. If an error occurs during this process,
+// it logs the error and returns it.
+func (r *AIChatWorkspaceReconciler) ensureInitConfigMap(ctx context.Context, instance *appsv1alpha1.AIChatWorkspace, cm *corev1.ConfigMap) (*ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	found := &networkingv1.Ingress{}
+
+	found := &corev1.ConfigMap{}
 
 	err := r.Get(context.TODO(), types.NamespacedName{
-		Name:      ing.Name,
+		Name:      cm.Name,
 		Namespace: instance.Spec.WorkspaceName,
 	}, found)
-	if err != nil && errors.IsNotFound(err) {
-		logger.Info("Creating a Ingress", "Workspace", instance.Spec.WorkspaceName, "Name", ing.Name)
-		err = r.Create(context.TODO(), ing)
 
+	if err != nil && errors.IsNotFound(err) {
+		logger.Info("Creating the configmap", "instance.Spec.Namespace", instance.Spec.WorkspaceName)
+
+		controllerutil.SetControllerReference(instance, cm, r.Scheme)
+		err = r.Create(context.TODO(), cm)
 		if err != nil {
 			logger.Error(
 				err,
-				"Creating Ingress",
-				"Name", ing.Name,
-				"Workspace", instance.Spec.WorkspaceName,
+				"Creating configmap",
+				"WorkspaceName", instance.Spec.WorkspaceName,
 			)
-
-			return &reconcile.Result{}, err
+			return &ctrl.Result{}, err
 		}
 
 		return nil, nil
 
 	} else if err != nil {
-		// Error that isn't due to the ingress not existing
-		logger.Error(
-			err,
-			"Getting Ingress",
-			"Name", ing.Name,
-			"Workspace", instance.Spec.WorkspaceName,
-		)
-		return &reconcile.Result{}, err
+		logger.Error(err, "Failed to get configmap")
+
+		return &ctrl.Result{}, err
 	}
 
 	return nil, nil

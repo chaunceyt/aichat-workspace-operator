@@ -92,6 +92,11 @@ func (in *AIChatWorkspaceSpec) DeepCopyInto(out *AIChatWorkspaceSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Embeddings != nil {
+		in, out := &in.Embeddings, &out.Embeddings
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Patterns != nil {
 		in, out := &in.Patterns, &out.Patterns
 		*out = make([]string, len(*in))

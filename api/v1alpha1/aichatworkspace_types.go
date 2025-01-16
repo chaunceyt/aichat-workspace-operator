@@ -33,9 +33,41 @@ type AIChatWorkspaceSpec struct {
 	// List of default models for this workspace.
 	Models []string `json:"models"`
 
+	// List of default embedding models
+	Embeddings []string `json:"embeddings,omitempty"`
+
 	// List of patterns
 	// https://github.com/danielmiessler/fabric/tree/main/patterns
 	Patterns []string `json:"patterns,omitempty"`
+
+	// Qdrant an open-source, high performance vector store with an comprehensive API
+	// https://qdrant.tech/
+	// +kubebuilder:validation:default:=false
+	Qdrant bool `json:"qdrant,omitempty"`
+
+	// N8N is a low-code platform with over 400 integrations and AI components
+	// +kubebuilder:validation:default:=false
+	N8N bool `json:"n8n,omitempty"`
+
+	// timescale postgres with pgai support
+	// https://docs.timescale.com/
+	// +kubebuilder:validation:default:=false
+	Postgres bool `json:"postgres,omitempty"`
+
+	// OpenwebUI
+	// https://openwebui.com/
+	// +kubebuilder:validation:default:=true
+	OpenWebUI bool `json:"openwebui,omitempty"`
+
+	// Openwebui Pipelines
+	// Modular, customizable workflows for any UI client supporting OpenAI API specs
+	// +kubebuilder:validation:default:=false
+	OpenWebUIPipelines bool `json:"openwebuiPipelines,omitempty"`
+
+	// Flowise another No/low code AI agent builder that pairs very well with n8n
+	// https://flowiseai.com/
+	// +kubebuilder:validation:default:=false
+	Flowise bool `json:"flowise,omitempty"`
 }
 
 // AIChatWorkspaceStatus defines the observed state of AIChatWorkspace.

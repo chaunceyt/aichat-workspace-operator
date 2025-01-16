@@ -33,10 +33,10 @@ resources:
 # be able to communicate with the Webhook Server.
 #- ../network-policy
 - system-configmap.yaml
-- mysql-secret.yaml
-- mysql-storage.yaml
-- mysql-deployment.yaml
-- mysql-service.yaml
+#- mysql-secret.yaml
+#- mysql-storage.yaml
+#- mysql-deployment.yaml
+#- mysql-service.yaml
 #- ollama-sts.yaml
 #- ollama-svc.yaml
 

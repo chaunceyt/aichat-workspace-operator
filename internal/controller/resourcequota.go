@@ -51,13 +51,22 @@ func (r *AIChatWorkspaceReconciler) ensureResourceQuota(ctx context.Context, ins
 	}, found)
 
 	if err != nil && errors.IsNotFound(err) {
-		logger.Info("Creating a resource quota", "ResourceQuota.Namespace", instance.Spec.WorkspaceName, "ResourceQuota.Name", rq.Name)
+		logger.Info(
+			"Creating a resource quota",
+			"Name", rq.Name,
+			"Workspace", instance.Spec.WorkspaceName,
+		)
 
 		controllerutil.SetControllerReference(instance, rq, r.Scheme)
 		err = r.Create(context.TODO(), rq)
 
 		if err != nil {
-			logger.Error(err, "Failed to create resource quota", "ResourceQuota.Namespace", instance.Spec.WorkspaceName, "ResourceQuota.Name", rq.Name)
+			logger.Error(
+				err,
+				"Creating resource quota",
+				"Name", rq.Name,
+				"Workspace", instance.Spec.WorkspaceName,
+			)
 			return &ctrl.Result{}, err
 		}
 
